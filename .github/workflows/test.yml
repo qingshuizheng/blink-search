@@ -1,0 +1,65 @@
+name: test
+on: [ push, pull_request, workflow_dispatch ]
+
+jobs:
+  # The gates this refactor added, on every Emacs release the tree claims to
+  # support.  `Package-Requires' declares 28, so the floor is part of the matrix.
+  gates:
+    name: gates (Emacs ${{ matrix.emacs_version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        emacs_version:
+          - "28.2"
+          - "29.4"
+          - "30.1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Emacs
+        uses: purcell/setup-emacs@master
+        with:
+          version: ${{ matrix.emacs_version }}
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install the elisp dependencies
+        run: |
+          # The gates run Emacs with -Q, which also disables site-lisp, so the
+          # packages the tree requires have to sit on the default load path.
+          # EMACSLOADPATH *replaces* the path, and the trailing colon keeps the
+          # built-in directories in it.
+          mkdir -p "$HOME/elisp"
+          for repo in tumashu/posframe jrblevin/markdown-mode; do
+            git clone --depth 1 "https://github.com/$repo" "$HOME/elisp/$(basename "$repo")"
+          done
+          echo "EMACSLOADPATH=$HOME/elisp/posframe:$HOME/elisp/markdown-mode:" >> "$GITHUB_ENV"
+
+      - name: Install the Python dependencies
+        run: pip install epc sexpdata ruff
+
+      - name: The two halves agree on the protocol version
+        run: python3 scripts/check-protocol.py
+
+      - name: Every form reads, then byte compile and checkdoc
+        run: CHECKDOC=1 ./scripts/check-elisp.sh
+
+      - name: Python gates (py_compile, docstrings, ruff and pydocstyle)
+        run: ./scripts/check-python.sh --strict
+
+      - name: Tests (ERT suites and the pure Python ones)
+        run: ./scripts/check-test.sh
+
+      - name: Upload the byte compiled output of a failure
+        uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: gates-log-${{ matrix.emacs_version }}
+          path: /tmp/blink-search-elc
+          retention-days: 3

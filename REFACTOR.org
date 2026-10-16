@@ -1,0 +1,197 @@
+* blink-search 重构计划（分支 =refactor/full=）
+
+基线：上游 =957191b=（2026-10-17）。允许破坏兼容，**不做兼容 shim**（Elisp 与
+Python 两侧同属本仓库，一起改；对外只有 Emacs 侧的公开命令与选项保持同名）。
+本文件是路线图 + 验收标准；每个阶段对应一个（或一组）可 review 的提交。
+
+** 目标
+
+1. **docstring 完整**：所有 =defun=/=defmacro=/=defsubst=/=defvar=/=defconst=/
+   =defcustom=/=defface=、以及 Python 的 function/class 都有 docstring，并且是
+   "能读"的：首行是完整句子（以句号结尾）、参数在正文里被提到、不超过 80 列。
+2. **结构性重构**：见「目标结构」；重点是 Elisp 与 Python 的协议单一来源、
+   Python 侧的 backend 注册与搜索/渲染状态分离、把两个 god file
+   （=blink-search.el= 1104 行、=blink_search.py= 516 行）拆开。
+3. **可验证**：每个阶段都有机器判据（见「验收」），并且有本地测试兜底。
+
+** 基线（2026-10-17，重构开始前）
+
+*** docstring（=scripts/docstring-report.py=）
+
+| 范围 | definitions | missing |
+|------+-------------+---------|
+| Python（不含 =test/=） | 166 | **159**（documented 4.2%）|
+| =blink_search.py= | 33 | 32 |
+| =core/utils.py= | 27 | 23 |
+| =core/search.py= | 14 | 14 |
+| backend/*.py（14 个） | — | 其余 ~90 |
+| Elisp | 见重构开始后的第一次报告 | — |
+
+*** byte-compile（=scripts/check-elisp.sh=）
+
+| 文件 | warning | error |
+|------+---------+-------|
+| =blink-search.el= | — | **1**（=Symbol's value as variable is void:
+  blink-search-backend-path=：=defvar= 在 =eval-and-compile= 之后才求值）|
+| =blink-search-epc.el= | 7 | 0 |
+| =blink-search-icon.el= | 2 | 0 |
+| =backend/blink-search-elisp-symbol.el= | 4 | 2 |
+| =backend/blink-search-imenu.el= | 9 | 0 |
+| =backend/blink-search-buffer-list.el= | 6 | 0 |
+| =backend/blink-search-recent-file.el= | 4 | 0 |
+| 其余 5 个 backend | 0 | 0 |
+
+=blink-search-icon.el= 缺 =lexical-binding= cookie。
+
+*** Python lint（=ruf=）
+
+- hard gate（E9,F63,F7,F82,E722,F841,W291,W293）：**221 条**，其中 E722 裸
+  =except= 16 处、W291/W293 行尾空白 205 处。
+- documentation gate（D）：**154 条**。
+- 其他可选规则（I001/UP*/C4*/SIM*…）：89 条，重构时顺手清掉。
+
+*** 测试
+
+上游**没有任何测试**，也没有 CI。
+
+** 目标结构
+
+*** Elisp
+
+| 文件 | 职责 |
+|------+------|
+| =blink-search.el= | 门面：=blink-search= / =blink-search-quit= / =blink-search-restart-process= / =blink-search-kill-process= / =blink-search-start-process=，=require= 其余模块并 =provide= |
+| =blink-search-protocol.el= | 协议单一来源：=blink-search-protocol-version=、EPC 方法名与参数形状、两侧共用的 =custom= 名称表 |
+| =blink-search-state.el= | 四个内部 buffer 与界面状态（candidate/backend 选中项、计数、posframe frame），状态 **只在这里 defvar** |
+| =blink-search-process.el= | EPC 服务端/客户端、Python 进程生命周期、=eval-in-emacs= / =get-emacs-var= 回调 |
+| =blink-search-input.el= | =blink-search-mode= 与 keymap、输入监听（=#= / =!= / =;= / =:= 前缀） |
+| =blink-search-ui.el= | 窗口布局（bottom / posframe）、缓冲区别名选项、图标与主题颜色 |
+| =blink-search-render.el= | candidate/backend/tooltip 三个 buffer 的绘制，纯函数尽量可单测 |
+| =blink-search-navigate.el= | 上下选择、分组跳转、quick-do、action 分发、=goto-column= |
+| =backend/blink-search-*.el= | 各 Elisp backend 的候选产生器（只依赖 process + state） |
+
+*** Python
+
+| 文件 | 职责 |
+|------+------|
+| =blink_search.py= | 入口：组装并启动 EPC server / 事件循环，然后 =join= |
+| =core/protocol.py= | =PROTOCOL_VERSION=、EPC 方法名与消息字段常量 |
+| =core/backend.py= | =SearchBackend= 基类 + 注册表（=register_backend= / =backend_by_name=） |
+| =core/registry.py= | backend 发现：把 =backend/*.py= 的类实例化并注册 |
+| =core/search.py= | 搜索执行：ticker、线程、子进程（与上游同名同职责） |
+| =core/session.py= | 一次 blink-search 会话的状态机：候选表、backend 表、渲染窗口、选择 |
+| =core/navigator.py= | 默认 backend 列表、=PDF= 条件插入、目录初始化、历史记录 |
+| =core/utils.py= | EPC 小工具（与上游同职责，清掉死代码与裸 except） |
+| =backend/search_*.py= | 每个 backend 一个类，继承 =SearchBackend=，自带 =NAME= 并注册 |
+
+** 阶段与验收
+
+*** S0 门禁与计划（本次提交）
+
+交付 =scripts/check-elisp.sh=、=scripts/check-test.sh=、=scripts/check-python.sh=、
+=scripts/check-forms.el=、=scripts/docstring-report.py=、=scripts/check-protocol.py=、
+=pyproject.toml=、=.github/workflows/test.yml=、本文件。
+
+验收：三个脚本能跑（=check-python.sh= 允许 hard gate 暂时失败，但输出必须稳定）；
+=check-forms.el= 报 0 个不平衡文件。
+
+*** S1 Elisp 拆包（结构 + docstring + 编译零告警）
+
+把 =blink-search.el= 按「目标结构」拆开；修 =eval-and-compile= 顺序 bug；
+=blink-search-icon.el= 补 =lexical-binding=；backend 补齐 docstring 与
+=declare-function=。
+
+验收：=CHECKDOC=1 scripts/check-elisp.sh= 零 error、零 warning、checkdoc 零问题；
+=scripts/docstring-report.py --check= 对 =.el= 通过。
+
+*** S2 Python 重构（backend 协议 + 状态分离 + docstring 全覆盖）
+
+按「目标结构」拆 =blink_search.py=；backend 全部继承 =SearchBackend= 并注册；
+=blink-search-epc.el= 与 =blink_search.py= 的 EPC 方法名收敛到
+=blink-search-protocol.el= / =core/protocol.py=，由 =scripts/check-protocol.py= 看守。
+
+验收：=scripts/check-python.sh --strict= 全绿（含 D 规则）；=scripts/check-test.sh= 的
+Python 单测全绿；两侧协议版本一致。
+
+*** S3 测试
+
+- Elisp：ERT 覆盖纯函数（颜色混合、=goto-column=、候选截断、quick-key 解析、
+  协议常量）与 EPC 侧的行为；
+- Python：=unittest= 覆盖 =SearchBackend= 匹配逻辑、=Search= ticker/线程纪律、
+  =session= 选择与渲染窗口计算、每个 backend 的候选构造（不依赖外部命令，
+  命令执行用假 =subprocess=）。
+
+验收：=scripts/check-test.sh= 全绿；新 backend 的行为至少有一个测试。
+
+*** S4 nix 接入与配置
+
+=nix-config= 侧：=home/darwin/emacs/packages.nix= 增加
+=overrideBlinkSearch=（=melpaBuild= + 带 =epc= 的 Python 解释器），
+=home/darwin/emacs/emacs-config/lisp/init-blink-search.el= 写配置，
+=init.el= 增加 =require=。
+
+验收：=nix eval= 通过；=emacs -Q --batch -l init-blink-search.el= 不报错；
+=just test=（nix-config）通过。
+
+*** S5 推送
+
+=fork= 指向 =qingshuizheng/blink-search=，=refactor/full= 分支 force-push；
+=nix-config= 里的 pin 指向推送后的 rev。
+
+** 进度
+
+- 2026-10-17 **S0 门禁与计划**：建立 =scripts/= 、=pyproject.toml= 与 CI；
+  基线数据记在本文。Elisp 侧 =blink-search.el= 的
+  =Symbol's value as variable is void: blink-search-backend-path= 是
+  =eval-and-compile= 求值顺序 bug（=defvar= 在后），S1 第一刀就修它。
+  门禁脚本：=check-elisp.sh=（读顶层 form → 整体 byte-compile → 逐文件
+  byte-compile → checkdoc）、=check-python.sh=（py_compile → docstring →
+  ruff hard gate → ruff D）、=check-test.sh=（docstring → 协议 → ERT →
+  unittest）、=check-protocol.py=（版本 + 两侧方法表 + backend update 方法名）。
+  第三方文件 =blink-search-epc.el= 与 docstring 报告中的 =VENDORED= 一样被
+  checkdoc 跳过：它是 tkf/emacs-epc 的 fork，docstring 不是我们的。
+- 2026-10-17 **S1 Elisp 拆包完成**：=blink-search.el= 从 1104 行拆成
+  =blink-search-protocol.el= / =blink-search-state.el= /
+  =blink-search-process.el= / =blink-search-ui.el= / =blink-search-render.el= /
+  =blink-search-input.el= / =blink-search-navigate.el=，主文件只剩 require 与
+  load-path（约 100 行）。=defvar= 顺序 bug 随 =eval-and-compile= 一起消失。
+  修掉/收敛的实现问题：
+  - =blink-search-icon.el= 补 =lexical-binding=，=blink-search-enable-icon= 改为
+    require 到 =blink-search-state=；
+  - 全部 =defvar=/=defun= 补 docstring；backend 补 =require= 与
+    =declare-function=，不再依赖加载顺序；
+  - =blink-search-browser-function= 的 =:set= 会往函数单元写别名（=defalias=），
+    自定义变量与函数单元会不同步；改为 Python 侧调用新函数
+    =blink-search-open-browser=（内部 =funcall= 该变量），旧名保留为
+    =define-obsolete-function-alias=，协议表两个名字都列；
+  - 删除三个只声明没用的变量（如 =blink-search-quick-keys= 移到 state 作为
+    =defcustom=）。
+  验收：=CHECKDOC=1 scripts/check-elisp.sh= 0 warning 0 error、
+  =docstring-report.py --check= 对 =.el= 通过。
+- 2026-10-17 **S2 Python 重构完成**：=blink_search.py= 从 516 行降为入口
+  （EPC 组装 + 两个线程 + EPC 方法），新增：
+  - =core/protocol.py=：=PROTOCOL_VERSION=、EMACS_METHODS、默认 backend 列表；
+  - =core/backend.py=：=SearchBackend= 基类（ticker 纪律、=send_candidates=、
+    =is_match=、子进程管理）+ =register_backend= 注册表；update 方法名由
+    **backend 模块名**推导（=search_eaf_browser_history_update=），从类名
+    推导会得到 =e_a_f_...= 这种错名；
+  - =core/session.py=：候选表与两个渲染窗口、选择与分组跳转；新增
+    =window_size=（窗口实际行数）—— 上游用 =row_number= 去做滚动算术，
+    但窗口是若干 backend 切片拼起来的，可能短于 =row_number=，于是候选多时
+    选择会卡在第 5 行左右走不下去，这是重构中实际修掉的 bug；
+  - =core/navigator.py=：默认 backend 列表 / PDF 条件加入 / 目录初始化 /
+    历史记录与回放；
+  - =core/search.py= 删除（其 =Search= 就是新的 =SearchBackend=）；
+  - 14 个 backend 全部改为继承 =SearchBackend= 并 =@register_backend=，
+    补齐 docstring，裸 =except= 换成带日志的 =except Exception=，5 处
+    "取一次结果就崩"的 =try/except: pass= 改为返回空结果。
+  验收：=scripts/check-python.sh --strict= 全绿（139 个定义 100% 有
+  docstring，ruff hard gate 与 D 规则全过）。
+- 2026-10-17 **S3 测试完成**：Elisp 侧 3 个 ERT 文件 16 例（=render= 7、
+  =ui= 5、=protocol= 4），Python 侧 5 个 unittest 文件 59 例（=backend=
+  基类与注册表、=session= 状态机、=search_backends= 各 backend 纯逻辑、
+  =process= 装配、=utils= 与 =parse_rg_line=）。=scripts/check-test.sh= 全绿。
+  测试写下来的三条事实（与上游行为不同，已在代码注释里说明）：=color-blend=
+  0.5 是 =#808080= 而不是 =#7f7f7f=；=indent-pixel= 返回的是三个元素的
+  =display= 规格；=common-directory= 的关键字必须也被小写化，否则大写输入
+  永远匹配不到（上游 bug，已修）。

@@ -1,4 +1,4 @@
-;;; blink-search-icon.el --- Icon for blink-search
+;;; blink-search-icon.el --- Icon for blink-search  -*- lexical-binding: t; -*-
 
 ;; Filename: blink-search-icon.el
 ;; Description: Icon for blink-search
@@ -39,8 +39,10 @@
 
 ;;; Commentary:
 ;;
-;; Icon for blink-search
-;;
+;; Icon rendering for blink-search.  Every icon is an SVG file under icons/,
+;; turned into an image with `svg.el' and cached per (collection, name) pair.
+;; `blink-search-icon-build' is the only entry point the rest of the package
+;; uses: it degrades to an empty string when the display cannot show SVG.
 
 ;;; Installation:
 ;;
@@ -55,40 +57,24 @@
 ;;
 ;; No need more.
 
-;;; Customize:
-;;
-;;
-;;
-;; All of the above can customize by:
-;;      M-x customize-group RET blink-search-icon RET
-;;
+;;; Code:
 
-;;; Change log:
-;;
-;; 2022/06/07
-;;      * First released.
-;;
-
-;;; Acknowledgements:
-;;
-;;
-;;
-
-;;; TODO
-;;
-;;
-;;
-
-;;; Require
 (require 'svg)
 
-;;; Code:
+;; The icon option lives with the rest of the options, in blink-search-state;
+;; requiring it keeps the byte compiler from treating the reference below as a
+;; free variable.
+(require 'blink-search-state)
 
 (defvar blink-search-icon-collections
   '(("bootstrap" . "https://icons.getbootstrap.com/icons/%s.svg")
     ("material" . "https://raw.githubusercontent.com/Templarian/MaterialDesign/master/svg/%s.svg")
     ("octicons" . "https://raw.githubusercontent.com/primer/octicons/master/icons/%s-24.svg")
-    ("boxicons" . "https://boxicons.com/static/img/svg/regular/bx-%s.svg")))
+    ("boxicons" . "https://boxicons.com/static/img/svg/regular/bx-%s.svg"))
+  "Remote sources of the icon collections.
+
+Each element is a cons of a collection name and a URL template; the
+template takes the icon name with `format'.")
 
 (defvar blink-search-icon-alist
   `(("Buffer List" . ("material" "list-box-outline" "#98c807"))
@@ -102,17 +88,30 @@
     ("Current File" . ("material" "code-greater-than-or-equal" "#00b2a9"))
     ("IMenu" . ("material" "file-tree-outline" "#e04646"))
     ("Common Directory" . ("material" "folder-marker-outline" "#ff9900"))
-    (t . ("material" "file-find-outline" "#90cef1"))))
+    (t . ("material" "file-find-outline" "#90cef1")))
+  "Icon of every search backend.
 
-(defvar blink-search-icon-cache (make-hash-table :test 'equal))
-(defvar blink-search-icon-dir (expand-file-name "icons" (file-name-directory load-file-name)))
-(defvar blink-search-icon-width 4)
+The key is the backend name as the Python half spells it; the value is
+a list of collection, icon name and foreground colour.  The entry
+whose key is t is the fallback used by a backend that has no icon of
+its own.")
+
+(defvar blink-search-icon-cache (make-hash-table :test 'equal)
+  "Cache of rendered icons, keyed by \"COLLECTION_NAME\".")
+
+(defvar blink-search-icon-dir (expand-file-name "icons" (file-name-directory load-file-name))
+  "Directory that holds the SVG files shipped with blink-search.")
+
+(defvar blink-search-icon-width 4
+  "Width of an icon, in characters.")
 
 (defun blink-search-icon-filepath (collection name)
+  "Return the path of the icon NAME of COLLECTION."
   (concat (file-name-as-directory blink-search-icon-dir) (format "%s_%s.svg" collection name)))
 
 ;;;###autoload
 (defun blink-search-icon-fetch-all ()
+  "Download every icon of `blink-search-icon-alist' into `blink-search-icon-dir'."
   (interactive)
   (dolist (icon blink-search-icon-alist)
     (let* ((collection (nth 0 (cdr icon)))
@@ -124,6 +123,7 @@
         (write-region (point-min) (point-max) filename)))))
 
 (defun blink-search-icon-parse (collection name)
+  "Parse the SVG of icon NAME of COLLECTION and return its XML tree."
   (with-temp-buffer
     (insert-file-contents (blink-search-icon-filepath collection name))
     (xml-parse-region (point-min) (point-max))))
@@ -137,6 +137,11 @@ If COLOR-NAME is unknown to Emacs, then return COLOR-NAME as-is."
       color-name)))
 
 (defun blink-search-icon (collection name &optional fg-color bg-color zoom)
+  "Build the icon NAME of COLLECTION as an SVG image.
+
+FG-COLOR is the stroke colour and BG-COLOR the plate behind the icon;
+either may be a face name or a colour string.  ZOOM is an integer
+scale factor, 1 by default."
   (let* ((root (blink-search-icon-parse collection name))
 
          ;; Read original viewbox
@@ -181,6 +186,11 @@ If COLOR-NAME is unknown to Emacs, then return COLOR-NAME as-is."
     (svg-image svg :ascent 'center :scale 1)))
 
 (defun blink-search-icon-build (collection name fg-color)
+  "Return the display string of icon NAME of COLLECTION coloured FG-COLOR.
+
+The result is cached in `blink-search-icon-cache'.  Return an empty
+string when the icon cannot be shown, so that callers can always
+concatenate the result into a candidate line."
   (if (and (display-graphic-p)
            blink-search-enable-icon
            (image-type-available-p 'svg))

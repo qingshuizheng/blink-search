@@ -84,29 +84,31 @@
 
 ;;; Code:
 
-(defvar blink-search-recent-file-timer nil)
-(defvar blink-search-recent-file-size 0)
+(require 'blink-search-state)
+(require 'blink-search-process)
+(require 'blink-search-navigate)
 
-(defcustom blink-search-recent-file-update-idle 4
-  "The idle seconds to update recent files."
-  :type 'float
-  :group 'blink-search)
+(defvar blink-search-recent-file-timer nil
+  "The idle timer that pushes the recent file list to the Python half.")
+
+(defvar blink-search-recent-file-size 0
+  "Number of recent files the Python half was told about last time.")
 
 (defun blink-search-recent-file-update ()
-  "We need synchronize recent files to Python side when idle."
-  (let* ((files-size (length recentf-list)))
-    ;; Only synchronize when new symbol created.
-    (unless (equal blink-search-recent-file-size files-size)
-      (blink-search-call-async "search_recent_file_update" (mapcar #'substring-no-properties recentf-list))
-      (setq blink-search-recent-file-size files-size))))
+  "Push the recent file list to the Python half when it has changed.
+
+The list is only sent when its length changed, so that the idle timer
+stays cheap on a large `recentf-list'.")
 
 (defun blink-search-start-recent-file-update ()
+  "Push the recent file list once, then keep it up to date while idle."
   (blink-search-recent-file-update)
 
   (unless blink-search-recent-file-timer
     (setq blink-search-recent-file-timer (run-with-idle-timer blink-search-recent-file-update-idle t #'blink-search-recent-file-update))))
 
 (defun blink-search-stop-recent-file-update ()
+  "Stop the idle timer and forget how many files were sent."
   (when blink-search-recent-file-timer
     (cancel-timer blink-search-recent-file-timer)
     (setq blink-search-recent-file-timer nil)

@@ -10,12 +10,12 @@
 ;; Last-Updated: 2022-11-04 08:41:34
 ;;           By: Andy Stewart
 ;; URL: https://www.github.org/manateelazycat/blink-search-imenu
-;; Keywords: 
+;; Keywords:
 ;; Compatibility: GNU Emacs 28.2
 ;;
 ;; Features that might be required by this library:
 ;;
-;; 
+;;
 ;;
 
 ;;; This file is NOT part of GNU Emacs
@@ -40,7 +40,7 @@
 ;;; Commentary:
 ;;
 ;; IMenu backend for blink-search
-;; 
+;;
 
 ;;; Installation:
 ;;
@@ -57,7 +57,7 @@
 
 ;;; Customize:
 ;;
-;; 
+;;
 ;;
 ;; All of the above can customize by:
 ;;      M-x customize-group RET blink-search-imenu RET
@@ -71,12 +71,12 @@
 
 ;;; Acknowledgements:
 ;;
-;; 
+;;
 ;;
 
 ;;; TODO
 ;;
-;; 
+;;
 ;;
 
 ;;; Require
@@ -84,13 +84,23 @@
 
 ;;; Code:
 
+(require 'imenu)
+(require 'blink-search-state)
+(require 'blink-search-process)
+(require 'blink-search-navigate)
+
 (defun blink-search-init-imenu ()
+  "Push the imenu candidates of the start buffer to the Python half."
   (when (blink-search-epc-live-p blink-search-epc-process)
     (with-current-buffer blink-search-start-buffer
       (let ((candidates (blink-search-imenu-get-candidates)))
         (when candidates (blink-search-call-async "search_imenu_update" candidates))))))
 
 (defun blink-search-imenu-get-candidates ()
+  "Return the imenu index of the start buffer as a list of candidates.
+
+Each candidate is a list of the name of the entry and the position it
+points at.  Return nil when the buffer has no imenu index at all."
   (ignore-errors
     (mapcar (lambda (info) (list (car info) (marker-position (cdr info))))
             (let* ((index (ignore-errors (imenu--make-index-alist t))))
@@ -99,6 +109,12 @@
                  (delete (assoc "*Rescan*" index) index)))))))
 
 (defun blink-search-imenu-build-candidates (alist)
+  "Flatten the imenu ALIST into a list of (NAME . POSITION) candidates.
+
+The Types and Variables groups are dropped: they are a
+subdivision of a language's index, not something a user searches for
+by name.  Markers and overlays are copied, because the index alist is
+rebuilt on every search while the candidates outlive it."
   (cl-remove-if
    (lambda (c)
      (or (string-equal (car c) "Types")
@@ -125,6 +141,7 @@
                          (list elm)))))))
 
 (defun blink-search-imenu-do (point)
+  "Jump to POINT and flash the line the candidate is on."
   (goto-char point)
   (blink-search-flash-locate))
 
@@ -133,4 +150,3 @@
 (provide 'blink-search-imenu)
 
 ;;; blink-search-imenu.el ends here
-

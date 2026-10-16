@@ -84,9 +84,19 @@
 
 ;;; Code:
 
-(defvar blink-search-grep-file-temp-buffers nil)
+(require 'blink-search-state)
+(require 'blink-search-process)
+(require 'blink-search-navigate)
+
+(defvar blink-search-grep-file-temp-buffers nil
+  "Buffers a preview opened that were not open before it.
+
+`blink-search-grep-file-clean' kills them again when the user leaves
+the search, so that previewing a match does not leave a buffer behind
+for every candidate the cursor passed over.")
 
 (defun blink-search-grep-file-get-match-buffer (filepath)
+  "Return the buffer that visits FILEPATH, or nil when none does."
   (catch 'find-match
     (dolist (buffer (buffer-list))
       (when (string-equal (buffer-file-name buffer) filepath)
@@ -94,6 +104,10 @@
     nil))
 
 (defun blink-search-grep-file-do (file line column)
+  "Visit FILE, go to LINE and COLUMN, then flash the line.
+
+A line or column that no longer exists is ignored: the file may have
+changed since ripgrep read it."
   (find-file file)
   (ignore-errors
     (goto-line line)
@@ -101,6 +115,11 @@
   (blink-search-flash-locate))
 
 (defun blink-search-grep-file-preview (file line column)
+  "Preview the match at LINE and COLUMN of FILE.
+
+The buffer is remembered in `blink-search-grep-file-temp-buffers' when
+the file was not open before, so that `blink-search-grep-file-clean'
+can close it again."
   (blink-search-select-input-window
    (let ((match-file (blink-search-grep-file-get-match-buffer file)))
      (blink-search-grep-file-do file line column)
@@ -109,6 +128,7 @@
        ))))
 
 (defun blink-search-grep-file-clean ()
+  "Kill every buffer a previous preview opened."
   (dolist (temp-buffer blink-search-grep-file-temp-buffers)
     (kill-buffer temp-buffer))
 

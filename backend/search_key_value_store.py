@@ -1,6 +1,14 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""A small key/value store kept in a local sqlite database.
+
+The candidates are the keys of the table.  Three prefixes change what a
+selection does: "set KEY VALUE" stores a pair, "del KEY" removes one,
+and a plain key copies its value into the kill ring.
+"""
+
+
 # Copyright (C) 2022 EdmondFrank
 #
 # Author:     EdmondFrank <edmomdfrank@yahoo.com>
@@ -19,23 +27,29 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 import re
+import sqlite3
 
-try:
-    import sqlite3
-except ImportError:
-    print("can not import sqlite3, please run `pip install sqlite3` at first")
-
-
-from core.utils import get_emacs_var, eval_in_emacs, message_emacs
-from core.search import Search    # type: ignore
+from core.backend import SearchBackend, register_backend
+from core.utils import eval_in_emacs, get_emacs_var, message_emacs
 
 
-class SearchKeyValueStore(Search):
+@register_backend
+class SearchKeyValueStore(SearchBackend):
+    """Store and recall key/value pairs in a local sqlite database.
+
+    The candidates are the keys of the table.  Three prefixes change what a
+    selection does: "set KEY VALUE" stores a pair, "del KEY" removes one,
+    and a plain key copies its value into the kill ring, so that a stored
+    value can be pasted anywhere in Emacs.
     """
-    Key Value Store Backend for blink-search
-    """
-    def __init__(self, backend_name, message_queue) -> None:
+
+    NAME = "Key Value"
+
+    def __init__(self):
+        """Open the database and build the key/value table when it is new."""
+        super().__init__()
         blink_search_db_path = get_emacs_var("blink-search-db-path")
         blink_search_db_table = get_emacs_var("blink-search-db-table")
         self.table = blink_search_db_table
@@ -47,14 +61,14 @@ class SearchKeyValueStore(Search):
         self.set_regexp = re.compile(r"^set\s([^\s]+)\s([^\s]+)$")
         self.del_regexp = re.compile(r"^del\s([^\s]+)$")
 
-        Search.__init__(self, backend_name, message_queue)
-
     @staticmethod
     def create_connection(db_file):
-        """
-        create a database connection to the SQLite databasespecified by db_file
-        :param db_file: database file
-        :return: Connection object or None
+        """Return a connection to the sqlite database DB-FILE, or None.
+
+        The connection is shared with the threads that run the searches,
+        hence `check_same_thread=False'.  A database that cannot be opened
+        is reported and leaves the backend without a connection, which the
+        other methods check before they use it.
         """
         conn = None
         try:
@@ -65,6 +79,11 @@ class SearchKeyValueStore(Search):
         return conn
 
     def search_match(self, prefix):
+        """Return the keys that hold PREFIX, shortest query first.
+
+        A keyword that stores or deletes a pair is offered as a candidate of
+        its own, so that a user can type the whole command in one go.
+        """
         if not self.conn:
             return []
 
@@ -76,8 +95,15 @@ class SearchKeyValueStore(Search):
         return candidates
 
     def do(self, candidate):
+        """Store, delete or copy the pair CANDIDATE stands for.
+
+        "set KEY VALUE" updates the pair when the key exists and inserts it
+        otherwise; "del KEY" removes it; any other candidate copies its
+        value into the kill ring.
+        """
         if not self.conn:
             message_emacs("Invalid connection to sqlite3")
+            return
 
         set_matches = self.set_regexp.match(candidate)
         del_matches = self.del_regexp.match(candidate)
@@ -86,13 +112,13 @@ class SearchKeyValueStore(Search):
             value = set_matches.group(2)
             exists = f"SELECT 1 FROM {self.table} WHERE key = '{key}';"
             if self.conn.cursor().execute(exists).fetchone():
-                # Update existed iteam
+                # Update existed item
                 update = f"UPDATE {self.table} SET value = '{value}' WHERE key = '{key}';"
                 self.conn.cursor().execute(update)
                 self.conn.commit()
                 message_emacs(f"Updated key-value ({key}, {value}) successfully")
             else:
-                # Insert new iteam
+                # Insert new item
                 insert = f"INSERT INTO {self.table} (key, value) VALUES (?, ?);"
                 self.conn.cursor().execute(insert, (key, value))
                 self.conn.commit()
@@ -105,8 +131,24 @@ class SearchKeyValueStore(Search):
             message_emacs(f"Deleted {key} successfully")
         else:
             query = f"SELECT value FROM {self.table} WHERE key = '{candidate}';"
-            value = self.conn.cursor().execute(query).fetchone()[0]
-            eval_in_emacs("kill-new", value)
+            row = self.conn.cursor().execute(query).fetchone()
+            if row:
+                eval_in_emacs("kill-new", row[0])
+            else:
+                message_emacs(f"No key named {candidate}")
 
     def parent(self, candidate, from_history=False):
+        """Copy the value of CANDIDATE, like `do'.
+
+        FROM-HISTORY is accepted for the signature of the base class: a
+        stored pair has no parent to open.
+        """
+        del from_history
         self.do(candidate)
+
+    def clean(self):
+        """Close the database when the search is over."""
+        super().clean()
+        if self.conn is not None:
+            self.conn.close()
+            self.conn = None

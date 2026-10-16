@@ -84,7 +84,15 @@
 
 ;;; Code:
 
+(require 'blink-search-state)
+(require 'blink-search-process)
+(require 'blink-search-navigate)
+
 (defun blink-search-init-current-buffer ()
+  "Hand the content of the start buffer to the Python half.
+
+The content is base64 encoded, so that a buffer with mixed encodings or
+with NUL bytes survives the EPC round trip."
   (when (blink-search-epc-live-p blink-search-epc-process)
     (blink-search-call-async "search_init_current_buffer"
                              (buffer-name blink-search-start-buffer)
@@ -97,10 +105,15 @@
   (base64-encode-string (encode-coding-string str 'utf-8)))
 
 (defun blink-search-current-buffer-preview (buffer line column)
+  "Show BUFFER at LINE and COLUMN without leaving the search.
+
+The jump happens from the preview window, so the input window keeps the
+focus and the user can carry on typing."
   (blink-search-select-input-window
    (blink-search-current-buffer-do buffer line column)))
 
 (defun blink-search-current-buffer-do (buffer line column)
+  "Switch to BUFFER, go to LINE and COLUMN, then flash the line."
   (switch-to-buffer buffer)
   (goto-line line)
   (blink-search-goto-column column)

@@ -39,52 +39,26 @@
 
 ;;; Commentary:
 ;;
-;; Buffer list backend for blink-search
+;; Buffer list backend for blink-search: it pushes the names of the open
+;; buffers to the Python half, which then matches them against the keyword.
 ;;
-
-;;; Installation:
-;;
-;; Put blink-search-buffer-list.el to your load-path.
-;; The load-path is usually ~/elisp/.
-;; It's set in your ~/.emacs like this:
-;; (add-to-list 'load-path (expand-file-name "~/elisp"))
-;;
-;; And the following to your ~/.emacs startup file.
-;;
-;; (require 'blink-search-buffer-list)
-;;
-;; No need more.
-
-;;; Customize:
-;;
-;;
-;;
-;; All of the above can customize by:
-;;      M-x customize-group RET blink-search-buffer-list RET
-;;
-
-;;; Change log:
-;;
-;; 2022/11/04
-;;      * First released.
-;;
-
-;;; Acknowledgements:
-;;
-;;
-;;
-
-;;; TODO
-;;
-;;
-;;
+;; When sort-tab is installed the names are pushed in the order sort-tab shows
+;; the tabs in, so that a candidate list of buffers reads the same way as the
+;; tab bar does.
 
 ;;; Require
-
+(require 'blink-search-state)
+(require 'blink-search-process)
 
 ;;; Code:
 
+(defvar sort-tab-visible-buffers)
+
 (defun blink-search-buffer-list-update ()
+  "Push the names of the open buffers to the Python half.
+
+With sort-tab installed the tab order is preserved, so that the
+candidate list reads the same way as the tab bar."
   (when (blink-search-epc-live-p blink-search-epc-process)
     (if (featurep 'sort-tab)
         (blink-search-call-async "search_sort_buffer_list_update" (mapcar #'buffer-name (append sort-tab-visible-buffers (buffer-list))))

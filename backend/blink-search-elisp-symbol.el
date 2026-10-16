@@ -84,23 +84,39 @@
 
 ;;; Code:
 
-(defvar blink-search-elisp-symbol-timer nil)
-(defvar blink-search-elisp-symbol-size 0)
+(require 'blink-search-state)
+(require 'blink-search-process)
+(require 'blink-search-navigate)
 
-(defvar blink-search-elisp-parse-depth 100)
-(defvar blink-search-elisp-parse-limit 30)
+(defvar blink-search-elisp-symbol-timer nil
+  "The idle timer that pushes the elisp symbols to the Python half.")
+
+(defvar blink-search-elisp-symbol-size 0
+  "Number of symbols the Python half was told about last time.")
+
+(defvar blink-search-elisp-parse-depth 100
+  "How many levels up `blink-search-elisp-local-symbols' walks.
+
+A value that is too small makes the backend miss a binding that is
+nested deep inside the form around point.")
+
+(defvar blink-search-elisp-parse-limit 30
+  "How many bindings `blink-search-elisp-local-symbols' takes per form.")
+
 (defvar blink-search-elisp-var-binding-regexp
-  "\\_<\\(?:cl-\\)?\\(?:def\\(?:macro\\|subst\\|un\\)\\|l\\(?:ambda\\|e\\(?:\\(?:xical-le\\)?t\\)\\)\\)\\*?\\_>")
-(defvar blink-search-elisp-var-binding-regexp-1
-  "\\_<\\(?:cl-\\)?\\(?:do\\(?:list\\|times\\)\\)\\*?\\_>")
+  "\\_<\\(?:cl-\\)?\\(?:def\\(?:macro\\|subst\\|un\\)\\|l\\(?:ambda\\|e\\(?:\\(?:xical-le\\)?t\\)\\)\\)\\*?\\_>"
+  "Regexp that matches the head of a form which binds a name.")
 
-(defcustom blink-search-elisp-symbol-update-idle 5
-  "The idle seconds to update elisp symbols."
-  :type 'float
-  :group 'blink-search)
+(defvar blink-search-elisp-var-binding-regexp-1
+  "\\_<\\(?:cl-\\)?\\(?:do\\(?:list\\|times\\)\\)\\*?\\_>"
+  "Regexp that matches the head of a loop form which binds a name.")
 
 (defun blink-search-elisp-symbol-update ()
-  "We need synchronize elisp symbols to Python side when idle."
+  "Push the elisp symbols to the Python half when the number changed.
+
+Both the symbols of the buffer the search started from and the global
+symbols of the running Emacs are sent, so that a user can search for a
+function that exists but is not visible in the current buffer."
   (let* ((symbols (append (blink-search-elisp-local-symbols)
                           (blink-search-elisp-global-symbols)))
          (symbols-size (length symbols)))
@@ -110,18 +126,25 @@
       (setq blink-search-elisp-symbol-size symbols-size))))
 
 (defun blink-search-start-elisp-symbol-update ()
+  "Push the elisp symbols once, then keep them up to date while idle."
   (blink-search-elisp-symbol-update)
 
   (unless blink-search-elisp-symbol-timer
     (setq blink-search-elisp-symbol-timer (run-with-idle-timer blink-search-elisp-symbol-update-idle t #'blink-search-elisp-symbol-update))))
 
 (defun blink-search-stop-elisp-symbol-update ()
+  "Stop the idle timer and forget how many symbols were sent."
   (when blink-search-elisp-symbol-timer
     (cancel-timer blink-search-elisp-symbol-timer)
     (setq blink-search-elisp-symbol-timer nil)
     (setq blink-search-elisp-symbol-size 0)))
 
 (defun blink-search-elisp-symbol-do (candidate)
+  "Run the most useful action for the symbol named CANDIDATE.
+
+A command is called, a function or macro is described, a face is
+customized, a variable is described: whatever the symbol is, the user
+gets the buffer that says everything about it."
   (let* ((symbol (intern candidate)))
     (cond ((commandp symbol)
            (call-interactively symbol))
@@ -136,6 +159,7 @@
            (describe-variable symbol)))))
 
 (defun blink-search-elisp-global-symbols ()
+  "Return every symbol of the running Emacs that a user can look up."
   (all-completions ""
                    obarray
                    (lambda (symbol)
@@ -145,6 +169,13 @@
                          (facep symbol)))))
 
 (defun blink-search-elisp-local-symbols ()
+  "Return the names bound by the forms around point.
+
+The walk goes up `blink-search-elisp-parse-depth' levels and collects
+the first `blink-search-elisp-parse-limit' names of every binding form
+it meets, which is what makes a local `let' binding searchable before
+the file it lives in has been evaluated.  Return nil outside of an
+Emacs Lisp buffer."
   (when (or (derived-mode-p 'emacs-lisp-mode)
             (derived-mode-p 'inferior-emacs-lisp-mode)
             (derived-mode-p 'lisp-interaction-mode))

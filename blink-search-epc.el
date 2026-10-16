@@ -82,7 +82,8 @@ modify it because the applications run on various environments.")
 
 (defvar blink-search-deferred-queue nil
   "[internal] The execution queue of deferred objects.
-See the functions `blink-search-deferred-post-task' and `blink-search-deferred-worker'.")
+
+See `blink-search-deferred-post-task' and `blink-search-deferred-worker'.")
 
 (defun blink-search-deferred-post-task (d which &optional arg)
   "[internal] Add a deferred object to the execution queue
@@ -246,13 +247,17 @@ is a short cut of following code:
     d))
 
 (defun blink-search-deferred-nextc (d callback)
-  "Create a deferred object with OK callback and connect it to the given deferred object."
+  "Create a deferred object with OK callback.
+
+It is connected to the given deferred object D."
   (declare (indent 1))
   (let ((nd (make-blink-search-deferred-object :callback callback)))
     (blink-search-deferred-set-next d nd)))
 
 (defun blink-search-deferred-error (d callback)
-  "Create a deferred object with errorback and connect it to the given deferred object."
+  "Create a deferred object with an errorback.
+
+It is connected to the given deferred object D."
   (declare (indent 1))
   (let ((nd (make-blink-search-deferred-object :errorback callback)))
     (blink-search-deferred-set-next d nd)))
@@ -394,7 +399,7 @@ observers can get the values by following code:
                   (apply 'blink-search-epc-signal-send
                          (cons (blink-search-epc-connection-channel connection) event))
                   (setq ok t))
-              ('error (blink-search-epc-log "MsgError: %S / <= %S" err event)))
+              (error (blink-search-epc-log "MsgError: %S / <= %S" err event)))
           (unless ok
             (blink-search-epc-process-available-input connection process)))))))
 
@@ -496,7 +501,9 @@ This variable is for debug purpose.")
    (t (cadr args))))
 
 (defun blink-search-epc-init-epc-layer (mngr)
-  "[internal] Connect to the server program and return an blink-search-epc-connection instance."
+  "[internal] Connect to the server program.
+
+Return the `blink-search-epc-connection' instance it uses."
   (let* ((mngr mngr)
          (conn (blink-search-epc-manager-connection mngr))
          (channel (blink-search-epc-connection-channel conn)))
@@ -668,10 +675,10 @@ connection."
 ;; epcs
 (defvar blink-search-epc-server-client-processes nil
   "[internal] A list of ([process object] . [`blink-search-epc-manager' instance]).
+
 When the server process accepts the client connection, the
-`blink-search-epc-manager' instance is created and stored in this variable
-`blink-search-epc-server-client-processes'. This variable is used for the management
-purpose.")
+`blink-search-epc-manager' instance is created and stored in this
+variable.  This variable is used for the management purpose.")
 
 ;; blink-search-epc-server
 ;;   name    : process name (string)   ex: "EPC Server 1"
@@ -727,7 +734,7 @@ This variable is used for the management purpose.")
             (blink-search-epc-init-epc-layer mngr)
             (when connect-function (funcall connect-function mngr))
             mngr)
-        ('error
+        (error
          (blink-search-epc-log "LSPBRIDGE-EPC-SERVER- Protocol error: %S" err)
          (blink-search-epc-log "LSPBRIDGE-EPC-SERVER- ABORT %S" process)
          (delete-process process))))

@@ -1,11 +1,11 @@
 *.elc
 *.pyc
+__pycache__/
 /.log/
+/.venv/
+/.ruff_cache/
 node_modules/
 dist/
 tags
 test.log
 workspace/
-__pycache__
-backend/__pycache__
-core/__pycache__

@@ -59,24 +59,41 @@ def close_epc_client() -> None:
 
 
 def handle_arg_types(arg: Any) -> Any:
-    """Wrap ARG the way sexpdata should print it in an `eval-in-emacs' form.
+    """Return ARG as the value that should appear in an `eval-in-emacs' form.
 
-    A string that starts with a quote is passed as the symbol it names, so
-    that the Python half can ask Emacs to call a function by name.
+    The form is `eval'ed on the Emacs side, so the value has to be protected
+    from that evaluation when reading it as a value would not give the value
+    back:
+
+    * a string that starts with a quote names an Emacs function, and is
+      passed as the symbol it names;
+    * a list is quoted, because a list whose first element is a keyword (the
+      plist of a candidate, or the list of those plists) would otherwise be
+      read as a function call and fail with `invalid-function';
+    * numbers, strings and symbols evaluate to themselves, so they are
+      passed as they are.
+
+    This is the line between a menu that fills and a menu that stays empty:
+    the candidate rows are a list of plists, and every one of them needs the
+    quote.
     """
     if type(arg) is str and arg.startswith("'"):
-        arg = sexpdata.Symbol(arg.partition("'")[2])
+        return sexpdata.Symbol(arg.partition("'")[2])
 
-    return sexpdata.Quoted(arg)
+    if isinstance(arg, list):
+        return sexpdata.Quoted(arg)
+
+    return arg
 
 
 def eval_in_emacs(method_name: str, *args: Any) -> None:
     """Call the Elisp METHOD-NAME with ARGS, asynchronously.
 
-    The arguments are printed as a Lisp form and evaluated by
-    `blink-search--eval-in-emacs-func' on the Emacs side.
+    The arguments are printed as a Lisp form and `eval'ed by
+    `blink-search--eval-in-emacs-func' on the Emacs side, which is what makes
+    a Python list of dictionaries arrive as a list of plists.
     """
-    sexp_args = [sexpdata.Symbol(method_name)] + list(map(handle_arg_types, args))
+    sexp_args = [sexpdata.Symbol(method_name)] + [handle_arg_types(arg) for arg in args]
     sexp = sexpdata.dumps(sexp_args)
 
     logger.debug("Eval in Emacs: %s", sexp)

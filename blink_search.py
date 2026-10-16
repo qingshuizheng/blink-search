@@ -24,9 +24,16 @@ import queue
 import sys
 import threading
 import traceback
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from epc.server import ThreadingEPCServer
+
+# The package directory has to be on the path before `backend' and `core' can
+# be imported: Emacs starts this file by its absolute path, but the working
+# directory it inherits is whatever Emacs had, which is not necessarily the
+# directory this file lives in.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import backend as backend_package
 from core.backend import SearchBackend, backend_classes, update_method_name
@@ -86,6 +93,12 @@ class BlinkSearch:
         self.message_thread = threading.Thread(target=self.message_dispatcher)
         self.message_thread.start()
 
+        # Importing the backend modules is what registers them, so this has
+        # to happen before the registry is read.  Without it the process
+        # starts with no backend at all: no candidate is ever produced, and
+        # the `search_*_update' methods the Elisp half calls do not exist.
+        import_backends()
+
         self.session = SearchSession()
         self.backends = self.build_backends()
         self.navigator = SearchNavigator(self.backends, self.session)
@@ -98,10 +111,39 @@ class BlinkSearch:
         # The event loop never exits: this is the main loop of the process.
         self.event_loop.join()
 
+    # -- the EPC dispatch table -------------------------------------------
+
+    def _get_method(self, name: str):
+        """Return the method the EPC name NAME stands for, or None.
+
+        EPC resolves a method name by asking the registered instance for it;
+        an instance that does not answer ends up with only the methods that
+        were registered by hand, so every `call' from Emacs fails with
+        "EPC-ERROR: No such method".  The name arrives with hyphens (EPC
+        turns the Lisp symbol `select-next-candidate-item' into
+        `select_next_candidate_item' before this is called), and both
+        spellings are accepted here.
+
+        Only a public name is answered: an EPC client may not reach
+        `_get_method' itself, nor any other private attribute of the search
+        process.
+        """
+        method_name = name.replace("-", "_")
+        if method_name.startswith("_"):
+            return None
+
+        method = getattr(self, method_name, None)
+        if callable(method):
+            return method
+        return None
+
     # -- startup -----------------------------------------------------------
 
     def build_backends(self) -> Dict[str, SearchBackend]:
         """Build one instance of every registered backend.
+
+        `import_backends' has to have run, or the registry is empty and this
+        returns nothing.
 
         The update methods the Elisp half calls are created here as well:
         `search_imenu_update' and friends are what Emacs uses to push the

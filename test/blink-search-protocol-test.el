@@ -8,7 +8,7 @@
 ;; the same way scripts/check-protocol.py does.
 ;;
 ;; Run with:
-;;   Emacs -Q --batch -L . -L backend -L test -l test/blink-search-protocol-test.el \
+;;   Emacs -Q --batch -L . -L test -l test/blink-search-protocol-test.el \
 ;;         -f ert-run-tests-batch-and-exit
 
 ;;; Code:

@@ -68,7 +68,7 @@ Python 两侧同属本仓库，一起改；对外只有 Emacs 侧的公开命令
 | =blink-search-ui.el= | 窗口布局（bottom / posframe）、缓冲区别名选项、图标与主题颜色 |
 | =blink-search-render.el= | candidate/backend/tooltip 三个 buffer 的绘制，纯函数尽量可单测 |
 | =blink-search-navigate.el= | 上下选择、分组跳转、quick-do、action 分发、=goto-column= |
-| =backend/blink-search-*.el= | 各 Elisp backend 的候选产生器（只依赖 process + state） |
+| =blink-search-<backend>.el= | 各 Elisp backend 的候选产生器（只依赖 process + state）；与主文件同层，因为 melpa-build 只装顶层 .el |
 
 *** Python
 

@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 
 EMACS=${EMACS:-emacs}
 ELC_DIR=${ELC_DIR:-/tmp/blink-search-elc}
-LOAD_PATH="-L . -L backend"
+LOAD_PATH="-L ."
 if [ "$#" -gt 0 ]; then
     FILES=$*
 else

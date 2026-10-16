@@ -42,8 +42,8 @@
 ;;
 ;; Blink-Search: search many sources in the blink of an eye.
 ;;
-;; This file is the front door of the package.  It puts the Elisp backends on
-;; the load path and loads the modules the rest of the code is split into:
+;; This file is the front door of the package.  It loads the modules the rest
+;; of the code is split into:
 ;;
 ;;   blink-search-protocol.el  the Elisp/Python protocol, as data
 ;;   blink-search-state.el     every option and every piece of session state
@@ -73,16 +73,20 @@
 (require 'imenu)
 (require 'pulse)
 
-;; `blink-search-state' defines `blink-search-backend-path' from
-;; `load-file-name', so it has to be loaded before the path is used: the
-;; upstream order evaluated `eval-and-compile' before the `defvar' and made
-;; byte compilation of this file fail with "Symbol's value as variable is
-;; void".  State comes first for that reason, not by alphabetical accident.
+;; `blink-search-state' defines `blink-search-directory' from
+;; `load-file-name', and every other module builds its paths from it, so it
+;; has to be loaded first.  The upstream order evaluated `eval-and-compile'
+;; before the `defvar' and made byte compilation of this file fail with
+;; "Symbol's value as variable is void"; there is nothing to compile at load
+;; time any more.
+;;
+;; The Elisp backends used to live in backend/ with the Python ones, which
+;; meant the Nix build (and melpa-build in general) compiled and installed
+;; this file but not them: `require' then failed with "Cannot open load file,
+;; blink-search-elisp-symbol".  They sit next to this file now, which is also
+;; where the rest of the package is, and backend/ holds the Python half only.
 (require 'blink-search-protocol)
 (require 'blink-search-state)
-
-(eval-and-compile
-  (add-to-list 'load-path blink-search-backend-path t))
 
 (require 'blink-search-process)
 (require 'blink-search-ui)

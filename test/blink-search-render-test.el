@@ -7,7 +7,7 @@
 ;; which is where the CI runs.
 ;;
 ;; Run with:
-;;   Emacs -Q --batch -L . -L backend -L test -l test/blink-search-render-test.el \
+;;   Emacs -Q --batch -L . -L test -l test/blink-search-render-test.el \
 ;;         -f ert-run-tests-batch-and-exit
 
 ;;; Code:

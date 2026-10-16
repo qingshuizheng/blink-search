@@ -339,16 +339,11 @@ It comes from the active region, or from the symbol at point when
     default-directory)
   "Directory blink-search was loaded from.
 
-It is the directory that holds blink_search.py, the backend/ directory
-and the icons/ directory.  The value is computed from `load-file-name',
-which means it is only correct when this file is loaded from its own
-directory; every path blink-search builds is derived from it.")
-
-(defvar blink-search-backend-path (expand-file-name "backend" blink-search-directory)
-  "Directory that holds the Elisp backends.
-
-It is added to the load path, so that a backend can be required by
-name.")
+It is the directory that holds blink_search.py, the Python backends
+under backend/ and the icons under icons/.  The value is computed from
+`load-file-name', which means it is only correct when this file is
+loaded from its own directory; every path blink-search builds is
+derived from it.")
 
 (defvar blink-search-python-file (expand-file-name "blink_search.py" blink-search-directory)
   "Path of the Python entry point of blink-search.")

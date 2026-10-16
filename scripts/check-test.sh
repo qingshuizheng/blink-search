@@ -15,7 +15,7 @@ EMACS=${EMACS:-emacs}
 
 run_ert() {
     "$EMACS" -Q --batch --eval "(setq load-prefer-newer t)" \
-        -L . -L backend -L test -l "$1" -f ert-run-tests-batch-and-exit
+        -L . -L test -l "$1" -f ert-run-tests-batch-and-exit
 }
 
 # The protocol gate imports the Python half, which needs epc and sexpdata,

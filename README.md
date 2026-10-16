@@ -99,6 +99,30 @@ blink-search has completed the following search backends:
 * Grep PDF: use `rga` search pdf files in several directories with `blink-search-grep-pdf-search-paths` 
 * PDF: use `rga` search current pdf file
 
+## Development
+
+This fork keeps the two halves of the package apart and checks both of them:
+
+```
+scripts/check-elisp.sh           # read every top-level form, byte compile, checkdoc
+scripts/check-python.sh          # py_compile, docstrings, ruff (see --strict)
+scripts/check-test.sh            # the ERT suites and the Python ones
+scripts/check-protocol.py        # the two halves agree on the protocol
+```
+
+`CHECKDOC=1 scripts/check-elisp.sh` also runs checkdoc, and
+`scripts/check-python.sh --strict` turns the docstring work list into a gate;
+both are clean in this tree, and `.github/workflows/test.yml` runs them on
+Emacs 28.2, 29.4 and 30.1.
+
+The Elisp half is a front door (`blink-search.el`) plus one file per concern:
+the protocol, the options and the session state, the Python process, the
+window layout, the drawing, the input buffer and the navigation.  The Python
+half is `blink_search.py` (the EPC surface) plus `core/` (the base class and
+registry of the backends, the session state machine, the backend rules) and
+`backend/` (one module per search source).  `REFACTOR.org` is the plan this
+tree was built from and the list of the bugs it fixed.
+
 ## Report bug
 
 Please use `emacs -q` and load a minimal setup with only blink-search to verify that the bug is reproducible. If `emacs -q` works fine, probably something is wrong with your Emacs config.

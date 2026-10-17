@@ -275,7 +275,12 @@ class KeyValueStoreTest(unittest.TestCase):
     """The key value backend stores, deletes and recalls pairs."""
 
     def setUp(self):
-        """Build a backend on a database of its own."""
+        """Build a backend on a database of its own.
+
+        The directory of the database is a fresh temporary one, so the
+        backend has to create it -- which is what a home directory that has
+        never seen this package looks like.
+        """
         self.database = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         self.database.close()
         self.addCleanup(os.unlink, self.database.name)

@@ -68,8 +68,11 @@ class SearchKeyValueStore(SearchBackend):
         else:
             # The directory may not exist yet on a fresh machine: sqlite
             # creates the file but not the path to it, and answers "unable to
-            # open database file" when the directory is missing.
-            touch(db_path)
+            # open database file" when the directory is missing.  `:memory:'
+            # is not a path, and creating a file with that name next to the
+            # program would be worse than useless.
+            if db_path != ":memory:":
+                touch(db_path)
             connection = self.create_connection(db_path)
             if connection is not None:
                 try:

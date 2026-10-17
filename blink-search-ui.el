@@ -168,6 +168,16 @@ candidate buffers want."
 
       (blink-search-select-window (get-buffer-window blink-search-input-buffer)))))
 
+(defun blink-search-bind-quit-keys (buffer)
+  "Make `C-g' leave the search from BUFFER too.
+
+The menu keeps the cursor in the input buffer, but a preview can leave the
+focus in another pane, and `C-g' there ran `keyboard-quit', which only beeps
+while the popup stayed on screen."
+  (with-current-buffer buffer
+    (local-set-key (kbd "C-g") #'blink-search-quit)
+    (local-set-key (kbd "ESC ESC ESC") #'blink-search-quit)))
+
 (defun blink-search-posframe-parent-frame ()
   "Return a live frame that is not blink-search's own posframe.
 

@@ -90,3 +90,17 @@ selected frame when the menu opens again."
       (blink-search-posframe-show (get-buffer-create " *blink-search-test*") 'origin))
     ;; the first element is the buffer, so the plist starts after it
     (should (eq (plist-get (cdr captured) :parent-frame) 'origin))))
+
+(ert-deftest blink-search-bind-quit-keys-makes-c-g-leave-the-search ()
+  "Every pane of the menu answers `C-g' with the quit command.
+
+A preview can leave the focus in the candidate or backend pane, where `C-g'
+used to be `keyboard-quit': it beeped and the popup stayed on screen."
+  (let ((buffer (generate-new-buffer " *blink-search-quit-keys*")))
+    (unwind-protect
+        (progn
+          (blink-search-bind-quit-keys buffer)
+          (with-current-buffer buffer
+            (should (eq (key-binding (kbd "C-g")) 'blink-search-quit))
+            (should (eq (key-binding (kbd "ESC ESC ESC")) 'blink-search-quit))))
+      (kill-buffer buffer))))

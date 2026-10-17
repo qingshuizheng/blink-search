@@ -63,13 +63,30 @@ called from is cleared."
   (interactive)
   (blink-search-call-async "clean")
 
-  (when blink-search-window-configuration
-    (set-window-configuration blink-search-window-configuration)
-    (setq blink-search-window-configuration nil)
+  ;; Close the popup first, and unconditionally.  This is the part the user
+  ;; sees, and it used to sit inside the `when' below: with no window
+  ;; configuration stored -- after a second `C-g', say -- nothing was hidden,
+  ;; and a popup that stays on screen reads as "C-g does nothing".
+  ;;
+  ;; The closing goes through `posframe-hide' when posframe is loaded: a bare
+  ;; `make-frame-invisible' followed by selecting the parent frame brought
+  ;; the child back on macOS, so the menu looked like it ignored the key.
+  (when (and blink-search-enable-posframe
+             (frame-live-p blink-search-posframe-frame))
+    (let ((buffer (get-buffer blink-search-input-buffer)))
+      (if (and buffer (fboundp 'posframe-hide))
+          (posframe-hide buffer)
+        (make-frame-invisible blink-search-posframe-frame))))
+  ;; A hidden frame may already be gone -- on macOS the child frame does not
+  ;; always survive the parent taking the focus back.  Forgotten, so the next
+  ;; menu opens a fresh one.
+  (setq blink-search-posframe-frame nil)
 
-    (when blink-search-enable-posframe
-      (make-frame-invisible blink-search-posframe-frame)
-      (select-frame-set-input-focus blink-search-posframe-emacs-frame)
+  (let ((parent (and (framep blink-search-posframe-emacs-frame)
+                     (frame-live-p blink-search-posframe-emacs-frame)
+                     blink-search-posframe-emacs-frame)))
+    (when parent
+      (select-frame-set-input-focus parent)
 
       ;; popup will call 'eaf--mac-focus-change'
       ;; which causes switched buffer
@@ -77,8 +94,11 @@ called from is cleared."
       (when (and (eq system-type 'darwin) (featurep 'eaf)
                  (eaf-emacs-not-use-reparent-technology)
                  eaf--mac-safe-focus-change)
-        (set-frame-parameter  blink-search-posframe-emacs-frame
-                              'eaf--mac-frame nil))))
+        (set-frame-parameter parent 'eaf--mac-frame nil))))
+
+  (when blink-search-window-configuration
+    (set-window-configuration blink-search-window-configuration)
+    (setq blink-search-window-configuration nil))
 
   ;; Forget the session itself whether or not there was a window
   ;; configuration to restore: the menu erases its buffers when it opens, but

@@ -182,5 +182,33 @@ so it is pinned here on the Elisp side."
       (blink-search-call-async "search_elisp_symbol_update" '("a" "b")))
     (should (equal (cdr captured) '(("a" "b"))))))
 
+
+(ert-deftest blink-search-quit-forgets-the-old-candidates ()
+  "Leaving the search clears what the menu was showing.
+
+The buffers are erased when the menu opens, but the variables that hold the
+candidates outlive it.  A key pressed after reopening, before the first new
+candidate arrives, would otherwise act on a candidate of the previous
+search -- opening a file the user did not select in this one."
+  (let ((blink-search-candidate-items (list '(:backend "Find File" :candidate "old.md")))
+        (blink-search-candidate-select-index 0)
+        (blink-search-backend-items (list "old.md"))
+        (blink-search-backend-select-index 0)
+        (blink-search-backend-name "Find File")
+        (blink-search-item-index 1)
+        (blink-search-items-number 1)
+        (blink-search-backend-number 1)
+        (blink-search-window-configuration nil))
+    (cl-letf (((symbol-function 'blink-search-call-async) #'ignore))
+      (blink-search-quit))
+    (should-not blink-search-candidate-items)
+    (should-not blink-search-candidate-select-index)
+    (should-not blink-search-backend-items)
+    (should-not blink-search-backend-select-index)
+    (should-not blink-search-backend-name)
+    (should-not blink-search-item-index)
+    (should-not blink-search-items-number)
+    (should-not blink-search-backend-number)))
+
 (provide 'blink-search-navigate-test)
 ;;; blink-search-navigate-test.el ends here

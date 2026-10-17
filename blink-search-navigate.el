@@ -78,14 +78,27 @@ called from is cleared."
                  (eaf-emacs-not-use-reparent-technology)
                  eaf--mac-safe-focus-change)
         (set-frame-parameter  blink-search-posframe-emacs-frame
-                              'eaf--mac-frame nil)))
+                              'eaf--mac-frame nil))))
 
-    (setq blink-search-start-buffer nil)
-    (setq blink-search-start-buffer-name nil)
-    (setq blink-search-start-path-name nil)
-    (setq blink-search-start-buffer-directory nil)
-
-    (setq blink-search-continue-directory nil)))
+  ;; Forget the session itself whether or not there was a window
+  ;; configuration to restore: the menu erases its buffers when it opens, but
+  ;; these variables outlive it, and a `C-m' pressed after reopening -- before
+  ;; the first new candidate arrives -- would act on a candidate of the search
+  ;; that just ended.  A second `C-g' has to be harmless, so this is outside
+  ;; the `when' above.
+  (setq blink-search-start-buffer nil)
+  (setq blink-search-start-buffer-name nil)
+  (setq blink-search-start-path-name nil)
+  (setq blink-search-start-buffer-directory nil)
+  (setq blink-search-continue-directory nil)
+  (setq blink-search-candidate-items nil)
+  (setq blink-search-candidate-select-index nil)
+  (setq blink-search-backend-items nil)
+  (setq blink-search-backend-select-index nil)
+  (setq blink-search-backend-name nil)
+  (setq blink-search-item-index nil)
+  (setq blink-search-items-number nil)
+  (setq blink-search-backend-number nil))
 
 (defun blink-search-quick-do ()
   "Run the action of the candidate the pressed quick key stands for.

@@ -214,5 +214,30 @@ gone."
       (should (null (blink-search-backends-test--epc result))
               ))))
 
+
+(ert-deftest blink-search-imenu-do-jumps-in-the-buffer-the-index-came-from ()
+  "The jump lands in the indexed buffer, not in whatever is current.
+
+The answer comes back after the menu has been left, and the current buffer
+at that moment is the input buffer: a `goto-char' into it put the point in
+the middle of the menu rows instead of on the definition."
+  (let ((indexed (generate-new-buffer " *imenu-indexed*"))
+        (elsewhere (generate-new-buffer " *imenu-elsewhere*")))
+    (unwind-protect
+        (progn
+          (with-current-buffer indexed
+            (insert "alpha\nbeta\ngamma\n"))
+          (with-current-buffer elsewhere
+            (insert "menu rows\n"))
+          (let ((blink-search-imenu-buffer indexed)
+                (elsewhere-point (with-current-buffer elsewhere (point))))
+            (with-current-buffer elsewhere
+              (cl-letf (((symbol-function 'blink-search-flash-locate) #'ignore))
+                (blink-search-imenu-do 7)))
+            (should (= (with-current-buffer indexed (point)) 7))
+            (should (= (with-current-buffer elsewhere (point)) elsewhere-point))))
+      (kill-buffer indexed)
+      (kill-buffer elsewhere))))
+
 (provide 'blink-search-backends-test)
 ;;; blink-search-backends-test.el ends here

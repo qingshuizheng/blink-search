@@ -89,9 +89,19 @@
 (require 'blink-search-process)
 (require 'blink-search-navigate)
 
+(defvar blink-search-imenu-buffer nil
+  "The buffer the index in the Python half was built from.
+
+`blink-search-start-buffer' is cleared when the menu is left, and the jump
+below runs after that: the position it is given belongs to this buffer, so
+the buffer is remembered here.
+
+`blink-search-start-buffer` is cleared by `blink-search-quit'.")
+
 (defun blink-search-init-imenu ()
   "Push the imenu candidates of the start buffer to the Python half."
   (when (blink-search-epc-live-p blink-search-epc-process)
+    (setq blink-search-imenu-buffer blink-search-start-buffer)
     (with-current-buffer blink-search-start-buffer
       (let ((candidates (blink-search-imenu-get-candidates)))
         (when candidates (blink-search-call-async "search_imenu_update" candidates))))))
@@ -141,9 +151,25 @@ rebuilt on every search while the candidates outlive it."
                          (list elm)))))))
 
 (defun blink-search-imenu-do (point)
-  "Jump to POINT and flash the line the candidate is on."
-  (goto-char point)
-  (blink-search-flash-locate))
+  "Jump to POINT in the buffer the index came from and flash the line.
+
+POINT is a position in that buffer, not in whatever buffer happens to be
+current when the answer arrives -- the menu has already been left, and the
+current buffer at that moment is the input buffer.  Jumping there put the
+point in the middle of the menu instead of on the definition."
+  (let* ((remembered (and (buffer-live-p blink-search-imenu-buffer)
+                          blink-search-imenu-buffer))
+         (buffer (or remembered
+                     ;; No buffer was remembered: the position belongs to
+                     ;; whatever buffer it fits in, which is the current one
+                     ;; for a caller that passes a position of its own.
+                     (if (and (integer-or-marker-p point)
+                              (<= (point-min) point (point-max)))
+                         (current-buffer)
+                       (window-buffer (selected-window))))))
+    (with-current-buffer buffer
+      (goto-char (min (max point (point-min)) (point-max)))
+      (blink-search-flash-locate))))
 
 (add-to-list 'blink-search-start-update-list #'blink-search-init-imenu t)
 

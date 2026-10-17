@@ -103,6 +103,93 @@
 (require 'blink-search-grep-pdf)
 (require 'blink-search-pdf)
 
+;;;###autoload
+
+;; EAF is optional: the command reads the URL of the buffer it is called
+;; from when that buffer is one, and the name only has to exist at run time.
+(defvar eaf--buffer-url)
+
+;;;###autoload
+(defun blink-search (&optional arg)
+  "Start a blink-search session.
+
+With ARG, the search starts from the symbol at point; without it the
+search starts empty.  An active region is used as the first keyword
+instead, and a keyword that starts with `#', `!', `;' or `:' restricts
+the search to the current buffer, the current directory, PDFs under
+`blink-search-grep-pdf-search-paths', or the current PDF file."
+  (interactive "P")
+
+  (setq blink-search-start-buffer (current-buffer))
+  (setq blink-search-start-buffer-name (buffer-name (current-buffer)))
+  (setq blink-search-start-path-name
+        (if (derived-mode-p 'eaf-mode)
+            eaf--buffer-url
+          (buffer-file-name (current-buffer))))
+  (setq blink-search-start-buffer-directory (with-current-buffer (current-buffer)
+                                              (expand-file-name default-directory)))
+
+  (setq blink-search-start-keyword (cond
+                                    ((region-active-p)
+                                     (buffer-substring-no-properties (region-beginning) (region-end)))
+                                    (t
+                                     (if arg (or (thing-at-point 'symbol t) "") ""))))
+
+  ;; Save window configuration.
+  (unless blink-search-window-configuration
+    (setq blink-search-window-configuration (current-window-configuration)))
+
+  ;; Create buffers.
+  (with-current-buffer (get-buffer-create blink-search-input-buffer)
+    (erase-buffer)
+
+    (blink-search-mode)
+
+    (run-hooks 'blink-search-mode-hook)
+    (add-hook 'after-change-functions 'blink-search-monitor-input nil t)
+
+    (blink-search-disable-options nil)
+
+    ;; Set window margin.
+    (setq-local left-margin-width 1)
+    (setq-local right-margin-width 1))
+
+  (with-current-buffer (get-buffer-create blink-search-tooltip-buffer)
+    (erase-buffer)
+
+    (blink-search-disable-options t)
+
+    ;; Avoid background around input string.
+    (face-remap-add-relative 'hl-line :background (face-background 'default))
+
+    ;; Set window margin.
+    (setq-local left-margin-width 1)
+    (setq-local right-margin-width 1))
+
+  (with-current-buffer (get-buffer-create blink-search-candidate-buffer)
+    (erase-buffer)
+    (blink-search-disable-options t)
+    (setq-local truncate-lines t))
+
+  (with-current-buffer (get-buffer-create blink-search-backend-buffer)
+    (erase-buffer)
+    (blink-search-disable-options t)
+    (setq-local truncate-lines t))
+
+  ;; Init color.
+  (blink-search-init-colors)
+
+  (if blink-search-enable-posframe
+      (blink-search-init-popup-layout)
+    (blink-search-init-bottom-layout))
+
+  (dolist (update-func blink-search-start-update-list)
+    (funcall update-func))
+
+  ;; Start process.
+  (unless blink-search-is-starting
+    (blink-search-start-process)))
+
 (provide 'blink-search)
 
 ;;; blink-search.el ends here

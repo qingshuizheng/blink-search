@@ -70,6 +70,9 @@ fi
 # batch is sorted, so a file that only defines a variable another file reads
 # first may be compiled after it.  Compiling every file with only its requires
 # on the load path is what catches that.
+echo "== the entry command is autoloaded from the entry file"
+$EMACS -Q --batch -L . -l scripts/check-autoloads.el || exit 1
+
 echo "== byte-compile each file on its own"
 for f in $FILES; do
     if ! out=$($EMACS -Q --batch $LOAD_PATH --eval "$redir" -f batch-byte-compile "$f" 2>&1); then

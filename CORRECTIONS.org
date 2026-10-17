@@ -1,0 +1,54 @@
+* Corrections to the refactor's own record
+
+** The scrolling "fix" in REFACTOR.org does not exist
+
+=REFACTOR.org= claims that the window arithmetic was "actually fixed" because
+the window is made of per-backend slices and can be shorter than
+=`row_number'=.  That claim was not checked, and it is wrong.
+
+The movement logic was rewritten (from index/offset bookkeeping to an
+absolute position), and the rewrite is clearer and is now covered by
+=`test_session.py'=, but it does **not** change what the menu does: the
+upstream algorithm and the rewritten one select the same candidates in the
+same order, including the case where the window scrolls.  Measured on the
+same scenario (two backends, eight rows, ten candidates): both walk
+`alpha0 ... alpha4 beta0 ... beta4` and stop at `beta4`, which is the last
+candidate either of them offers.
+
+What is true is the smaller thing: with ten candidates and eight rows, the
+last two rows are reached by scrolling rather than shown at once, which is
+what the window is for.  Nothing was broken there.
+
+** What does differ from upstream, measured
+
+A behaviour probe over both trees (`/tmp/upstream` at 957191b and this
+branch) reports exactly one difference:
+
+|=emacs-lisp|= | upstream | this branch |
+|-------------+----------+-------------|
+| common directory, keyword `home` | `("HOME notes.md")` | same |
+| common directory, keyword `HOME` | `()` | `("HOME notes.md")` |
+| buffer list, `elisp*` | `()` | same |
+| buffer list, `*scr` | `("*scratch*")` | same |
+| buffer list, hidden buffer last | yes | same |
+
+So the two trees agree except for the case-insensitive keyword, which is a
+deliberate fix (the upstream backend lower-cases the candidate it matches
+against and then matches a keyword that was not lower-cased, so an upper
+case letter in the keyword found nothing at all).
+
+The other differences are not in the search logic and did not touch the
+probe because they are about how the Elisp half reaches the process:
+
+* `blink-search-browser-function` is called through
+  `blink-search-open-browser' now, so setting it with `setq' takes effect;
+  upstream reached it through its own name and only the Customize setter
+  updated the function cell.
+* `blink-search-input-prefixes` is a table, and it accepts the full width
+  forms of `!`, `;` and `:` as well as the ascii ones.
+* `blink-search-call-async` bundles its arguments and the Python half writes
+  them as a Lisp list; upstream sent a vector, which is why the arguments of
+  every call arrived as one list.
+* The two PDF backends clear `blink-search-*-preview-timer` when they cancel
+  it, which the symbol and recent-file backends already did.
+* The package installs `icons/`, which melpa-build leaves out.

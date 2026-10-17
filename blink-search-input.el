@@ -42,6 +42,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'seq)
 (require 'blink-search-state)
 (require 'blink-search-process)
 (require 'blink-search-render)
@@ -133,6 +134,42 @@ the search to the current buffer, the current directory, PDFs under
   (unless blink-search-is-starting
     (blink-search-start-process)))
 
+(defconst blink-search-input-prefixes
+  '(("#" "Current Buffer")
+    ("!" "Grep File")
+    ("！" "Grep File")
+    (";" "Grep PDF")
+    ("；" "Grep PDF")
+    (":" "PDF")
+    ("：" "PDF"))
+  "Prefixes that restrict a search to a single backend.
+
+Each element is a cons of the character the keyword starts with and the
+name of the backend it stands for.  The full width forms of `!' and `;'
+and `:' are accepted as well, because a keyword typed with an input method
+turned on is still meant for the same backend.")
+
+(defun blink-search-input-backend (input)
+  "Return the backend INPUT is restricted to, or nil for all of them.
+
+INPUT is the whole content of the input buffer, already trimmed.  A
+keyword that starts with one of `blink-search-input-prefixes' searches
+that backend only; anything else searches
+`blink-search-search-backends'.  The returned value is the name of a
+backend, and nil means all of the backends the option allows."
+  (let ((prefix (seq-find (lambda (entry)
+                            (string-prefix-p (car entry) input))
+                          blink-search-input-prefixes)))
+    (cadr prefix)))
+
+(defun blink-search-input-keyword (input)
+  "Return the keyword INPUT carries, with its prefix taken off.
+
+An input that has no prefix is returned as it is."
+  (if (blink-search-input-backend input)
+      (substring input 1)
+    input))
+
 (defvar blink-search-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-g") 'blink-search-quit)
@@ -180,24 +217,15 @@ keyword that starts with `#' searches the current buffer, `!' the
 current directory, `;' the PDFs under
 `blink-search-grep-pdf-search-paths' and `:' the current PDF file;
 anything else searches `blink-search-search-backends'."
-  ;; Send new input to all backends when user change input.
+  ;; Send new input to the backends when the user changes it.
   (when (string-equal (buffer-name) blink-search-input-buffer)
     (let* ((input (string-trim
                    (with-current-buffer blink-search-input-buffer
-                     (buffer-substring-no-properties (point-min) (point-max))))))
-      (cond ((string-prefix-p "#" input)
-             (blink-search-call-async "search" (substring input 1) (blink-search-get-row-number) (list "Current Buffer")))
-            ((or (string-prefix-p "!" input)
-                 (string-prefix-p "！" input))
-             (blink-search-call-async "search" (substring input 1) (blink-search-get-row-number) (list "Grep File")))
-            ((or (string-prefix-p ";" input)
-                 (string-prefix-p "；" input))
-             (blink-search-call-async "search" (substring input 1) (blink-search-get-row-number) (list "Grep PDF")))
-            ((or (string-prefix-p ":" input)
-                 (string-prefix-p "：" input))
-             (blink-search-call-async "search" (substring input 1) (blink-search-get-row-number) (list "PDF")))
-            (t
-             (blink-search-call-async "search" input (blink-search-get-row-number) blink-search-search-backends))))))
+                     (buffer-substring-no-properties (point-min) (point-max)))))
+           (backend (blink-search-input-backend input))
+           (keyword (blink-search-input-keyword input)))
+      (blink-search-call-async "search" keyword (blink-search-get-row-number)
+                               (if backend (list backend) blink-search-search-backends)))))
 
 (defun blink-search-start ()
   "Run the search `blink-search' was called with.

@@ -23,6 +23,9 @@ python3 -m py_compile $PY
 echo "== docstring presence (scripts/docstring-report.py --check)"
 python3 scripts/docstring-report.py --check $PY
 
+echo "== every source file is named by a test (scripts/coverage-report.py --check)"
+python3 scripts/coverage-report.py --check
+
 echo "== ruff: hard gate (E9,F63,F7,F82,E722,F841,W291,W293)"
 # shellcheck disable=SC2086
 ruff check --no-cache --output-format concise \

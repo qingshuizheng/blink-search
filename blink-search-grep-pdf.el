@@ -85,7 +85,9 @@ A preview that is still pending is replaced, so that a quick
 (defun blink-search-grep-pdf-clean ()
   "Drop the preview buffers and cancel the pending preview."
   (blink-search-grep-file-clean)
-  (if blink-search-grep-pdf-preview-timer (cancel-timer blink-search-grep-pdf-preview-timer)))
+  (when blink-search-grep-pdf-preview-timer
+    (cancel-timer blink-search-grep-pdf-preview-timer)
+    (setq blink-search-grep-pdf-preview-timer nil)))
 
 (provide 'blink-search-grep-pdf)
 

@@ -195,3 +195,33 @@ Python 单测全绿；两侧协议版本一致。
   0.5 是 =#808080= 而不是 =#7f7f7f=；=indent-pixel= 返回的是三个元素的
   =display= 规格；=common-directory= 的关键字必须也被小写化，否则大写输入
   永远匹配不到（上游 bug，已修）。
+- 2026-10-17 **S5 覆盖面盘点（回答"测试和 docstring 齐了么"）**：不算数的话先
+  量一遍，再补。量出来的结果：
+  - docstring：418 个定义（Elisp 187 + Python 231）**0 个缺**；
+    =CHECKDOC=1 scripts/check-elisp.sh= 0 warning（vendored 的
+    =blink-search-epc.el= 按 =VENDORED= 跳过，与 docstring-report 一致）。
+  - 测试：新增 =scripts/coverage-report.py=，把「每个源文件是否被 test/ 提到」
+    变成门禁（=check-python.sh= 里跑），并列出 =EXEMPT= 及理由。补测试前
+    =--check= 会失败的 6 个 Python + 8 个 Elisp 模块，现在全绿：
+    + =test/test_search_tools.py=：=GrepPDF= / =PDF= / =CurrentBuffer= /
+      =ElispSymbol= / =History= 五个 backend 补测（rga 的页码前缀与 match
+      偏移回退、=Dn= 目录标记、临时文件、历史行拆分与回放）；
+    + =test/blink-search-backends-test.el=：8 个 Elisp backend 的推送载荷与
+      跳转；
+    + =test/blink-search-input-test.el=：前缀 → backend 规则；
+    + =test/blink-search-icon-test.el=：颜色转换与图标目录；
+    + =test/blink-search-navigate-test.el=：每个键请求的 EPC 方法、action
+      携带的 backend/候选、quick key、=goto-column=。
+    合计 ERT 49 例、Python 91 例。
+  - **盘点顺手抓到一个真 bug**：重构时改写 =blink-search-recent-file.el= 的
+    正文，把 =blink-search-recent-file-update= 的函数体整段删掉了 —— 只剩
+    docstring，返回 nil：定时器照跑，最近文件永远不推给 Python。byte-compile
+    与 checkdoc 都不会报这种事，所以补了 =scripts/check-bodies.el=（顶层
+    form 里「只有 docstring 的定义」即失败），已进门禁，并单独验过它能抓住
+    一个故意的空函数体。
+  - 另修：两个 PDF backend 的 =clean= 取消定时器后没有清变量（与 symbol /
+    recent-file 两个 backend 不一致），改为 =when= + =setq nil=。
+  - README：补了新选项（icon / quick-keys / history-db / pdf / idle /
+    log）、说明两处语义变化（=browser-function= 现在 =setq= 即生效；
+    =common-directory= 关键字大小写不敏感）、把 gate 列表与两个调试脚本
+    （=local-search.py= / =fake-emacs.py=）写进 Development 一节。

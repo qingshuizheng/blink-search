@@ -45,6 +45,14 @@ echo "== read every top-level form"
 $EMACS -Q --batch $LOAD_PATH -l scripts/check-forms.el \
     --eval "(z/check-forms $FILES_LISP)"
 
+# A definition whose body was lost still reads and still compiles: a `defun'
+# that is only a docstring silently returns nil.  Walk the definitions before
+# compiling anything.
+echo "== every definition has a body"
+# shellcheck disable=SC2086
+$EMACS -Q --batch $LOAD_PATH -l scripts/check-bodies.el \
+    --eval "(z/check-bodies $FILES_LISP)"
+
 echo "== byte-compile $COUNT file(s) -> $ELC_DIR"
 # shellcheck disable=SC2086
 $EMACS -Q --batch $LOAD_PATH --eval "$redir" -f batch-byte-compile $FILES

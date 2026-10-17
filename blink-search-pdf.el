@@ -140,7 +140,9 @@ The buffer is remembered when the file was not open before, so that
 (defun blink-search-pdf-clean ()
   "Drop the preview buffers and cancel the pending preview."
   (blink-search-grep-file-clean)
-  (if blink-search-pdf-preview-timer (cancel-timer blink-search-pdf-preview-timer)))
+  (when blink-search-pdf-preview-timer
+    (cancel-timer blink-search-pdf-preview-timer)
+    (setq blink-search-pdf-preview-timer nil)))
 
 (provide 'blink-search-pdf)
 

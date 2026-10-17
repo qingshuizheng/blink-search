@@ -79,6 +79,21 @@ blink-search will provide smooth completion experience without compromise to slo
 * `blink-search-common-directory`: Common directory to search and open, default is `'(("HOME" "~/"))`
 * `blink-search-grep-pdf-search-paths`: Paths to search for pdf files.
 * `blink-search-grep-pdf-backend`: Backend to use for pdf files, default is `'pdf-tools`, set to `'eaf-pdf-viewer` if you prefer to use EAF pdf viewer.
+* `blink-search-pdf-backend`, `blink-search-pdf-search-paths`, `blink-search-grep-pdf-preview-idle-time`: the same options for the single-file PDF backend and for the delay before a preview opens.
+* `blink-search-enable-icon`: show the icon of a backend in front of every candidate, default `t`
+* `blink-search-quick-keys`: the keys that select a candidate directly, each prefixed with the Meta key, in the order the menu shows them
+* `blink-search-history-path`, `blink-search-db-path`, `blink-search-db-table`: where the History backend records what you selected and where the Key Value backend keeps its database
+* `blink-search-elisp-symbol-update-idle`, `blink-search-recent-file-update-idle`: how many idle seconds pass before the symbol and recent file lists are pushed to the search process
+* `blink-search-enable-log`: print the log of the Python half into `*blink-search*`, for when a search answers nothing
+
+Two of them changed meaning in this fork:
+
+* `blink-search-browser-function` is called through a function of its own now,
+  so setting it with `setq` takes effect at once.  It used to be reached
+  through its own name, which only worked when the value was set through the
+  Customize interface.
+* `blink-search-common-directory` matches its entries case insensitively: a
+  keyword with an upper case letter in it used to find nothing at all.
 
 ## Search Backend
 
@@ -95,7 +110,9 @@ blink-search has completed the following search backends:
 * EAF Browser: search history of EAF browser
 * Elisp Symbol: search elisp symbol
 * Google Suggest: search google suggestions and open in browser
-* Key Value: read/get/del/update key-value pairs in sqlite3, require `sqlite3` and ensure `pip install sqlite3` at first
+* Key Value: read/get/del/update key-value pairs in sqlite3.  The `sqlite3`
+  module of the Python that runs the search is used, so nothing has to be
+  installed for it.
 * Grep PDF: use `rga` search pdf files in several directories with `blink-search-grep-pdf-search-paths` 
 * PDF: use `rga` search current pdf file
 
@@ -104,16 +121,33 @@ blink-search has completed the following search backends:
 This fork keeps the two halves of the package apart and checks both of them:
 
 ```
-scripts/check-elisp.sh           # read every top-level form, byte compile, checkdoc
-scripts/check-python.sh          # py_compile, docstrings, ruff (see --strict)
-scripts/check-test.sh            # the ERT suites and the Python ones
-scripts/check-protocol.py        # the two halves agree on the protocol
+scripts/check-elisp.sh      # every form reads, every definition has a body,
+                            # byte compile, checkdoc (CHECKDOC=1)
+scripts/check-python.sh     # py_compile, docstrings, coverage, ruff (--strict)
+scripts/check-test.sh       # the ERT suites and the Python ones
+scripts/check-protocol.py   # the version and the methods of the two halves
+scripts/coverage-report.py  # every source file is named by a test
+scripts/docstring-report.py # every definition has a docstring
 ```
 
-`CHECKDOC=1 scripts/check-elisp.sh` also runs checkdoc, and
-`scripts/check-python.sh --strict` turns the docstring work list into a gate;
-both are clean in this tree, and `.github/workflows/test.yml` runs them on
-Emacs 28.2, 29.4 and 30.1.
+The body check catches a specific mistake: a `defun` whose body was lost
+while it was being rewritten still compiles cleanly, still passes checkdoc,
+and is a command that silently does nothing.  `scripts/check-forms.el`
+already made sure every form reads; `scripts/check-bodies.el` makes sure
+every definition does something.
+
+Both halves are documented: `scripts/docstring-report.py` reports 0 of 418
+definitions missing a docstring, and `scripts/check-elisp.sh` with
+`CHECKDOC=1` reports no finding at all.  Every source file is named by a
+test, which is what `scripts/coverage-report.py --check` enforces, and
+`.github/workflows/test.yml` runs the gates on Emacs 28.2, 29.4 and 30.1.
+
+Two tools help when a search misbehaves, and neither is part of a gate:
+
+```
+scripts/local-search.py KEYWORD [BACKEND ...]   # run a real search in one process
+scripts/fake-emacs.py PORT                      # drive the Python half alone
+```
 
 The Elisp half is a front door (`blink-search.el`) plus one file per concern:
 the protocol, the options and the session state, the Python process, the

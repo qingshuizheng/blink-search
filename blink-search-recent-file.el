@@ -86,6 +86,11 @@
 
 (require 'blink-search-state)
 (require 'blink-search-process)
+
+;; `recentf-list' belongs to recentf, which this backend is about but does
+;; not start; declaring it here keeps the byte compiler from treating the
+;; reference as a free variable.
+(defvar recentf-list)
 (require 'blink-search-navigate)
 
 (defvar blink-search-recent-file-timer nil
@@ -98,7 +103,14 @@
   "Push the recent file list to the Python half when it has changed.
 
 The list is only sent when its length changed, so that the idle timer
-stays cheap on a large `recentf-list'.")
+stays cheap on a large `recentf-list'.  The names are copied with
+`substring-no-properties', because a text property in a file name would
+make the Python half see a different string than the one on disk."
+  (let* ((files-size (length recentf-list)))
+    (unless (equal blink-search-recent-file-size files-size)
+      (blink-search-call-async "search_recent_file_update"
+                               (mapcar #'substring-no-properties recentf-list))
+      (setq blink-search-recent-file-size files-size))))
 
 (defun blink-search-start-recent-file-update ()
   "Push the recent file list once, then keep it up to date while idle."

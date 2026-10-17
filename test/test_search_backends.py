@@ -448,3 +448,39 @@ class FindFileWithoutADirectoryTest(unittest.TestCase):
     def test_a_keyword_without_a_directory_is_empty(self):
         """Searching a project that is not known yet gives no candidate."""
         self.assertEqual(SearchFindFile().search_match("blink"), [])
+
+
+class KeyValueReconnectTest(unittest.TestCase):
+    """The database is reopened after the menu is left.
+
+    `clean' closes the connection when the menu is left, which happens after
+    every action.  A backend that did not reopen answered no candidate for
+    the rest of the session -- a pair that was just stored could not be
+    searched for again.
+    """
+
+    def setUp(self):
+        """Build a backend on a database of its own."""
+        self.database = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.database.close()
+        self.addCleanup(os.unlink, self.database.name)
+        with mock.patch("backend.search_key_value_store.get_emacs_var",
+                        side_effect=lambda name: (self.database.name
+                                                  if name == "blink-search-db-path"
+                                                  else "kvstore")), \
+             mock.patch("backend.search_key_value_store.message_emacs"):
+            self.backend = SearchKeyValueStore()
+
+    def test_a_pair_survives_leaving_the_menu(self):
+        """A stored pair is found again after `clean' closed the connection."""
+        with mock.patch("backend.search_key_value_store.message_emacs"):
+            self.backend.do("set answer 42")
+            self.backend.clean()
+            self.assertIn("answer", self.backend.search_match("answer"))
+
+    def test_storing_works_after_leaving_the_menu(self):
+        """The backend is usable again for the next pair."""
+        with mock.patch("backend.search_key_value_store.message_emacs"):
+            self.backend.clean()
+            self.backend.do("set second 7")
+            self.assertIn("second", self.backend.search_match("second"))

@@ -29,6 +29,7 @@ and a plain key copies its value into the kill ring.
 
 
 import re
+import threading
 import sqlite3
 
 from core.backend import SearchBackend, register_backend
@@ -60,6 +61,11 @@ class SearchKeyValueStore(SearchBackend):
         super().__init__()
         self.usable = False
         self.conn = None
+        self.db_path = None
+        # The search runs on its own thread and `clean' runs when the menu is
+        # left, so a close can land in the middle of a query.  Every use of
+        # the connection is under this lock.
+        self.db_lock = threading.Lock()
         self.table = get_emacs_var("blink-search-db-table") or "kvstore"
 
         db_path = get_emacs_var("blink-search-db-path")
@@ -73,6 +79,7 @@ class SearchKeyValueStore(SearchBackend):
             # program would be worse than useless.
             if db_path != ":memory:":
                 touch(db_path)
+            self.db_path = db_path
             connection = self.create_connection(db_path)
             if connection is not None:
                 try:
@@ -86,6 +93,34 @@ class SearchKeyValueStore(SearchBackend):
 
         self.set_regexp = re.compile(r"^set\s([^\s]+)\s([^\s]+)$")
         self.del_regexp = re.compile(r"^del\s([^\s]+)$")
+
+    def ensure_connection(self) -> bool:
+        """Reopen the database when it was closed, and say whether it is usable.
+
+        `clean' closes the connection when the menu is left, which happens
+        after every action.  A backend that did not reopen would answer no
+        candidate for the rest of the Emacs session, so the connection is
+        made when it is needed rather than when the backend is built.
+        """
+        with self.db_lock:
+            if self.usable and self.conn is not None:
+                return True
+            if not self.db_path:
+                return False
+            if not self.usable:
+                connection = self.create_connection(self.db_path)
+                if connection is None:
+                    return False
+                try:
+                    connection.cursor().execute(
+                        f"CREATE TABLE IF NOT EXISTS {self.table} "
+                        "(key TEXT NOT NULL, value TEXT NOT NULL);")
+                except sqlite3.Error as err:
+                    message_emacs("Key Value: {} ({})".format(err, self.db_path))
+                    return False
+                self.conn = connection
+                self.usable = True
+            return True
 
     @staticmethod
     def create_connection(db_file):
@@ -110,11 +145,20 @@ class SearchKeyValueStore(SearchBackend):
         A keyword that stores or deletes a pair is offered as a candidate of
         its own, so that a user can type the whole command in one go.
         """
-        if not self.usable:
+        if not self.ensure_connection():
             return []
 
         query = f"SELECT key FROM {self.table} WHERE key LIKE '%{prefix}%' LIMIT 20;"
-        candidates = list(map(lambda row: row[0], self.conn.cursor().execute(query).fetchall()))
+        with self.db_lock:
+            try:
+                candidates = list(map(lambda row: row[0],
+                                      self.conn.cursor().execute(query).fetchall()))
+            except sqlite3.Error as err:
+                # The connection went away under us; try once with a new one.
+                message_emacs("Key Value: {} (reconnecting)".format(err))
+                self.usable = False
+                self.conn = None
+                return []
         if self.set_regexp.match(prefix) or self.del_regexp.match(prefix):
             candidates.append(prefix)
 
@@ -127,10 +171,18 @@ class SearchKeyValueStore(SearchBackend):
         otherwise; "del KEY" removes it; any other candidate copies its
         value into the kill ring.
         """
-        if not self.usable:
+        if not self.ensure_connection():
             message_emacs("Key Value backend has no database")
             return
 
+        self.db_lock.acquire()
+        try:
+            self.store_or_copy(candidate)
+        finally:
+            self.db_lock.release()
+
+    def store_or_copy(self, candidate):
+        """Store, delete or copy CANDIDATE; called with the lock held."""
         set_matches = self.set_regexp.match(candidate)
         del_matches = self.del_regexp.match(candidate)
         if set_matches:
@@ -175,10 +227,11 @@ class SearchKeyValueStore(SearchBackend):
     def clean(self):
         """Close the database when the search is over."""
         super().clean()
-        if self.conn is not None:
-            try:
-                self.conn.close()
-            except sqlite3.Error as err:
-                message_emacs("Key Value: {} while closing".format(err))
-            self.conn = None
-        self.usable = False
+        with self.db_lock:
+            if self.conn is not None:
+                try:
+                    self.conn.close()
+                except sqlite3.Error as err:
+                    message_emacs("Key Value: {} while closing".format(err))
+                self.conn = None
+            self.usable = False

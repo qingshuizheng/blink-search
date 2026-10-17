@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import sexpdata  # noqa: E402
 
-from core.utils import handle_arg_types  # noqa: E402
+from core.utils import convert_emacs_var, handle_arg_types, to_lisp_list  # noqa: E402
 
 
 def form(method, *args) -> str:
@@ -98,3 +98,96 @@ class ArgumentEncodingTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EmacsVariableAnswerTest(unittest.TestCase):
+    """The shape Emacs answers `get-emacs-var' with.
+
+    A mistake here does not raise at the point of the mistake: it hands a
+    bool to a backend that goes on to treat it as a path, and the search dies
+    inside the EPC call with the menu left empty.  That is how the start
+    directory reached `os.path.expanduser' as False.
+    """
+
+    def test_a_string_answer_stays_a_string(self):
+        """An ordinary value is returned as it is."""
+        self.assertEqual(convert_emacs_var(["/tmp/project", "nil"]), "/tmp/project")
+
+    def test_a_boolean_answer_becomes_a_bool(self):
+        """The flag is what turns t and nil into True and False."""
+        self.assertIs(convert_emacs_var([True, "t"]), True)
+        self.assertIs(convert_emacs_var([None, "nil"]), None)
+
+    def test_an_empty_answer_is_false(self):
+        """python-epc turns an empty list into False, and so does this.
+
+        A variable Emacs cannot find is answered with an empty value; the
+        caller has to be able to tell that from a string, which is why it is
+        not turned into "" or None.
+        """
+        self.assertIs(convert_emacs_var([]), False)
+
+    def test_a_truncated_answer_does_not_raise(self):
+        """An answer of one element is still a value, not an IndexError."""
+        self.assertEqual(convert_emacs_var(["only"]), "only")
+
+    def test_a_list_of_answers_is_converted_in_order(self):
+        """`get_emacs_vars' answers align with the names it was asked for."""
+        answers = [["/tmp/a", "nil"], [], [True, "t"]]
+        self.assertEqual([convert_emacs_var(a) for a in answers], ["/tmp/a", False, True])
+
+
+class LispListTest(unittest.TestCase):
+    """A list has to arrive in Emacs as a list, not as a vector."""
+
+    def test_a_list_is_written_as_a_list(self):
+        """`sexpdata' writes a Python list as `[...]', which Emacs reads
+        as a vector whose single element is the list, so a method that
+        declared a list argument got a list of one element instead.
+        """
+        self.assertIn("(", form("f", ["a", "b"]))
+        self.assertNotIn("[", form("f", ["a", "b"]))
+        self.assertEqual(form("f", ["a", "b"]), "(f '(\"a\" \"b\"))")
+
+    def test_a_nested_list_is_a_list_at_every_depth(self):
+        """The rows of the menu are a list of lists."""
+        rows = [{"backend": "Find File", "candidate": {"text": "a", "matches": [[1, 2]]}}]
+        text = form("f", rows)
+        self.assertNotIn("[", text, text)
+        # one `quote' per list argument, none left as a vector
+        self.assertEqual(text.count("'"), 1, text)
+
+    def test_a_tuple_is_a_list_too(self):
+        """A tuple is the other way to ask for a Lisp list."""
+        self.assertEqual(form("f", ("a", "b")), "(f '(\"a\" \"b\"))")
+
+    def test_the_search_form_keeps_its_arguments_apart(self):
+        """The search arguments are three values, not one vector.
+
+        This is the bug that made every backend raise "'list' object has no
+        attribute 'replace'": the three arguments arrived as one list, so
+        the keyword the backends search for was a list of them.
+        """
+        text = form("search", "blink", 10, ["Buffer List"])
+        self.assertEqual(text, '(search "blink" 10 \'("Buffer List"))')
+        parsed = sexpdata.loads(text)
+        self.assertEqual(len(parsed), 4)
+        self.assertEqual(parsed[1], "blink")
+        self.assertEqual(parsed[2], 10)
+
+
+class ToLispListTest(unittest.TestCase):
+    """The recursive conversion itself."""
+
+    def test_a_list_becomes_a_tuple(self):
+        """The top level list is converted."""
+        self.assertEqual(to_lisp_list([1, 2]), (1, 2))
+
+    def test_the_conversion_recurses(self):
+        """A list inside a list is converted as well."""
+        self.assertEqual(to_lisp_list([[1], "a"]), ((1,), "a"))
+
+    def test_other_values_are_left_alone(self):
+        """Strings, numbers and dictionaries keep their type."""
+        for value in ("a", 1, {"k": "v"}, None, True):
+            self.assertEqual(to_lisp_list(value), value)

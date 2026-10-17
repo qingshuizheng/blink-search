@@ -95,13 +95,24 @@ class SearchNavigator:
             if backend is not None:
                 backend.search(input_keyword)
 
-    def search_init_search_dir(self, start_dir: str) -> None:
+    def search_init_search_dir(self, start_dir) -> None:
         """Tell every backend that supports it where to search.
 
         A backend that does not implement `init_dir' above the base class
         does not use a directory, so it is skipped rather than called with
         an argument it would ignore.
+
+        START-DIR has to be a string.  Emacs answers a variable it cannot
+        find with an empty value, which reaches this as False, and a backend
+        that passed that on to `os.path.expanduser' would raise -- inside the
+        EPC call, where the traceback lands in the *blink-search* buffer and
+        the menu simply stays empty.  A search that has no directory to
+        start from is reported and skipped instead.
         """
+        if not isinstance(start_dir, str) or start_dir == "":
+            logger.debug("no search directory to initialise from: %r", start_dir)
+            return
+
         for backend in self.backends.values():
             init_dir = getattr(backend, "init_dir", None)
             if init_dir is not None and init_dir.__func__ is not SearchBackend.init_dir:

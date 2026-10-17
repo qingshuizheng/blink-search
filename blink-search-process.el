@@ -102,10 +102,18 @@ list, so the flag is what lets the Python half tell nil from t."
   (mapcar #'blink-search--get-emacs-var-func vars))
 
 (defun blink-search-call-async (method &rest args)
-  "Call Python EPC function METHOD and ARGS asynchronously."
+  "Call Python EPC function METHOD and ARGS asynchronously.
+
+ARGS is flattened on purpose.  The Python half prints the argument list as
+one Lisp form and Emacs reads it back before the method is called, and a
+plain list is read as a list: `(read "[\"blink\" 10 (\"Buffer List\")]")'
+would hand the method a single vector holding all three arguments.  The
+Python side builds that form with `sexpdata', which writes a tuple the same
+way, so passing ARGS as one element is what makes the methods receive the
+arguments they declare."
   (when (blink-search-epc-live-p blink-search-epc-process)
     (blink-search-deferred-chain
-     (blink-search-epc-call-deferred blink-search-epc-process (read method) args))))
+     (blink-search-epc-call-deferred blink-search-epc-process (read method) (list args)))))
 
 (defun blink-search-open-browser (url)
   "Open URL in the browser `blink-search-browser-function' names.

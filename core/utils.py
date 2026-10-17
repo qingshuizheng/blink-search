@@ -58,6 +58,22 @@ def close_epc_client() -> None:
         epc_client.close()
 
 
+def to_lisp_list(value: Any) -> Any:
+    """Return VALUE with every Python list turned into a Lisp list.
+
+    `sexpdata' writes a Python list as `[...]', which Emacs reads as a
+    **vector**, and a Python tuple as `(...)`, which Emacs reads as a list.
+    The two are not interchangeable on the Emacs side: a method that
+    declares a list argument gets a vector whose single element is the
+    list, and every string it then treats as a keyword fails with
+    "'list' object has no attribute 'replace'".  Recursing here is what
+    keeps a list a list all the way down.
+    """
+    if isinstance(value, list):
+        return tuple(to_lisp_list(item) for item in value)
+    return value
+
+
 def handle_arg_types(arg: Any) -> Any:
     """Return ARG as the value that should appear in an `eval-in-emacs' form.
 
@@ -67,9 +83,10 @@ def handle_arg_types(arg: Any) -> Any:
 
     * a string that starts with a quote names an Emacs function, and is
       passed as the symbol it names;
-    * a list is quoted, because a list whose first element is a keyword (the
-      plist of a candidate, or the list of those plists) would otherwise be
-      read as a function call and fail with `invalid-function';
+    * a list is turned into a Lisp list and quoted, because a list whose
+      first element is a keyword (the plist of a candidate, or the list of
+      those plists) would otherwise be read as a function call and fail with
+      `invalid-function';
     * numbers, strings and symbols evaluate to themselves, so they are
       passed as they are.
 
@@ -80,8 +97,8 @@ def handle_arg_types(arg: Any) -> Any:
     if type(arg) is str and arg.startswith("'"):
         return sexpdata.Symbol(arg.partition("'")[2])
 
-    if isinstance(arg, list):
-        return sexpdata.Quoted(arg)
+    if isinstance(arg, (list, tuple)):
+        return sexpdata.Quoted(to_lisp_list(arg))
 
     return arg
 
@@ -116,10 +133,26 @@ def convert_emacs_bool(symbol_value: Any, symbol_is_boolean: Any) -> Any:
     return symbol_value
 
 
+def convert_emacs_var(result: Any) -> Any:
+    """Turn one (VALUE IS-BOOLEAN) answer into the value it stands for.
+
+    Emacs answers `get-emacs-var' with a list, and python-epc turns an empty
+    list into the Python `False'.  That happens for a variable that is bound
+    to nil, and it is what the callers of `get_emacs_vars' have to see: a
+    caller that goes on to treat the value as a path or a string has to check
+    its type anyway, because Emacs can answer with anything at all.
+    """
+    if result == []:
+        return False
+    if len(result) < 2:
+        return result[0] if result else False
+    return convert_emacs_bool(result[0], result[1])
+
+
 def get_emacs_vars(args: List[str]) -> List[Any]:
     """Return the values of the Emacs variables named in ARGS, in order."""
-    return list(map(lambda result: convert_emacs_bool(result[0], result[1]) if result != [] else False,
-                    epc_client.call_sync("get-emacs-vars", args)))  # type: ignore[union-attr]
+    answers = epc_client.call_sync("get-emacs-vars", args)  # type: ignore[union-attr]
+    return [convert_emacs_var(answer) for answer in answers]
 
 
 def get_emacs_var(var_name: str) -> Any:

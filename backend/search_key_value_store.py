@@ -32,7 +32,7 @@ import re
 import sqlite3
 
 from core.backend import SearchBackend, register_backend
-from core.utils import eval_in_emacs, get_emacs_var, message_emacs
+from core.utils import eval_in_emacs, get_emacs_var, message_emacs, touch
 
 
 @register_backend
@@ -48,16 +48,39 @@ class SearchKeyValueStore(SearchBackend):
     NAME = "Key Value"
 
     def __init__(self):
-        """Open the database and build the key/value table when it is new."""
-        super().__init__()
-        blink_search_db_path = get_emacs_var("blink-search-db-path")
-        blink_search_db_table = get_emacs_var("blink-search-db-table")
-        self.table = blink_search_db_table
-        self.conn = self.create_connection(blink_search_db_path)
+        """Open the database and build the key/value table when it is new.
 
-        init = f"CREATE TABLE IF NOT EXISTS {self.table} (key TEXT NOT NULL, value TEXT NOT NULL);"
-        if self.conn:
-            self.conn.cursor().execute(init)
+        A database that cannot be used leaves the backend switched off rather
+        than broken: `sqlite3.connect("")' is happy to return a connection
+        that fails on its first statement, so the connection is not proof
+        that the database works.  A backend that is switched off finds no
+        candidate and reports why, which is what keeps a bad path from
+        taking the whole search down.
+        """
+        super().__init__()
+        self.usable = False
+        self.conn = None
+        self.table = get_emacs_var("blink-search-db-table") or "kvstore"
+
+        db_path = get_emacs_var("blink-search-db-path")
+        if not isinstance(db_path, str) or db_path == "":
+            message_emacs("Key Value: no usable database path, the backend is off")
+        else:
+            # The directory may not exist yet on a fresh machine: sqlite
+            # creates the file but not the path to it, and answers "unable to
+            # open database file" when the directory is missing.
+            touch(db_path)
+            connection = self.create_connection(db_path)
+            if connection is not None:
+                try:
+                    connection.cursor().execute(
+                        f"CREATE TABLE IF NOT EXISTS {self.table} "
+                        "(key TEXT NOT NULL, value TEXT NOT NULL);")
+                    self.conn = connection
+                    self.usable = True
+                except sqlite3.Error as err:
+                    message_emacs("Key Value: {} ({})".format(err, db_path))
+
         self.set_regexp = re.compile(r"^set\s([^\s]+)\s([^\s]+)$")
         self.del_regexp = re.compile(r"^del\s([^\s]+)$")
 
@@ -66,17 +89,17 @@ class SearchKeyValueStore(SearchBackend):
         """Return a connection to the sqlite database DB-FILE, or None.
 
         The connection is shared with the threads that run the searches,
-        hence `check_same_thread=False'.  A database that cannot be opened
-        is reported and leaves the backend without a connection, which the
-        other methods check before they use it.
+        hence `check_same_thread=False'.  A path that is not a string, or
+        that cannot be opened, is reported and returns None.
         """
-        conn = None
-        try:
-            conn = sqlite3.connect(db_file, check_same_thread=False)
-        except Exception as err:  # pylint: disable=broad-except
-            print(err)
+        if not isinstance(db_file, str) or db_file == "":
+            return None
 
-        return conn
+        try:
+            return sqlite3.connect(db_file, check_same_thread=False)
+        except sqlite3.Error as err:
+            message_emacs("Key Value: {} ({})".format(err, db_file))
+            return None
 
     def search_match(self, prefix):
         """Return the keys that hold PREFIX, shortest query first.
@@ -84,7 +107,7 @@ class SearchKeyValueStore(SearchBackend):
         A keyword that stores or deletes a pair is offered as a candidate of
         its own, so that a user can type the whole command in one go.
         """
-        if not self.conn:
+        if not self.usable:
             return []
 
         query = f"SELECT key FROM {self.table} WHERE key LIKE '%{prefix}%' LIMIT 20;"
@@ -101,8 +124,8 @@ class SearchKeyValueStore(SearchBackend):
         otherwise; "del KEY" removes it; any other candidate copies its
         value into the kill ring.
         """
-        if not self.conn:
-            message_emacs("Invalid connection to sqlite3")
+        if not self.usable:
+            message_emacs("Key Value backend has no database")
             return
 
         set_matches = self.set_regexp.match(candidate)
@@ -150,5 +173,9 @@ class SearchKeyValueStore(SearchBackend):
         """Close the database when the search is over."""
         super().clean()
         if self.conn is not None:
-            self.conn.close()
+            try:
+                self.conn.close()
+            except sqlite3.Error as err:
+                message_emacs("Key Value: {} while closing".format(err))
             self.conn = None
+        self.usable = False

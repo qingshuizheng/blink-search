@@ -323,6 +323,44 @@ class KeyValueStoreTest(unittest.TestCase):
 
         self.assertNotIn("answer", self.backend.search_match("answer"))
 
+    def test_a_database_that_cannot_be_opened_switches_the_backend_off(self):
+        """A bad path is reported, not raised.
+
+        `sqlite3.connect("")' returns a connection that fails on its first
+        statement, so a backend that trusted the connection object raised out
+        of the search instead of answering with no candidate.
+        """
+        with mock.patch("backend.search_key_value_store.get_emacs_var",
+                        side_effect=lambda name: "" if name == "blink-search-db-path" else "kvstore"), \
+             mock.patch("backend.search_key_value_store.message_emacs") as report:
+            backend = SearchKeyValueStore()
+
+        self.assertFalse(backend.usable)
+        self.assertIsNone(backend.conn)
+        self.assertEqual(backend.search_match("anything"), [])
+        backend.clean()
+        self.assertTrue(report.called)
+
+    def test_a_path_that_is_not_a_string_switches_the_backend_off(self):
+        """An Emacs variable that came back empty is not a path."""
+        with mock.patch("backend.search_key_value_store.get_emacs_var",
+                        side_effect=lambda name: False if name == "blink-search-db-path" else "kvstore"), \
+             mock.patch("backend.search_key_value_store.message_emacs"):
+            backend = SearchKeyValueStore()
+
+        self.assertFalse(backend.usable)
+        self.assertEqual(backend.search_match("anything"), [])
+
+    def test_a_table_that_cannot_be_created_switches_the_backend_off(self):
+        """A database that refuses the table is reported as well."""
+        with mock.patch("backend.search_key_value_store.get_emacs_var",
+                        side_effect=lambda name: self.database.name if name == "blink-search-db-path" else "bad table name!"), \
+             mock.patch("backend.search_key_value_store.message_emacs") as report:
+            backend = SearchKeyValueStore()
+
+        self.assertFalse(backend.usable)
+        self.assertTrue(report.called)
+
 
 class UtilityTest(unittest.TestCase):
     """The helpers the backends share."""
@@ -358,3 +396,31 @@ class UtilityTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class KeyValueStorePathTest(unittest.TestCase):
+    """The directory of the database is created when it is missing."""
+
+    def test_a_missing_directory_is_created(self):
+        """sqlite creates the file but not the path to it.
+
+        On a machine where ~/.local/share or the var directory does not exist
+        yet, opening the database answered "unable to open database file",
+        which switched the backend off and reported a message about a file
+        the user never chose.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "a", "b", "kv.db")
+
+            def var(name):
+                return path if name == "blink-search-db-path" else "kvstore"
+
+            with mock.patch("backend.search_key_value_store.get_emacs_var", side_effect=var), \
+                 mock.patch("backend.search_key_value_store.message_emacs"):
+                backend = SearchKeyValueStore()
+
+            try:
+                self.assertTrue(backend.usable)
+                self.assertTrue(os.path.exists(path))
+            finally:
+                backend.clean()

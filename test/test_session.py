@@ -182,3 +182,70 @@ class SessionTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StartSearchTestCase(unittest.TestCase):
+    """What `start_search' does with the variables it reads from Emacs."""
+
+    def setUp(self):
+        """Build a navigator over one recording backend."""
+        from core.navigator import SearchNavigator
+
+        self.searched = []
+        self.initialised = []
+
+        class RecordingBackend:
+            """A backend that records what the navigator tells it."""
+
+            backend_name = "Recording"
+
+            def search(self, keyword):
+                """Remember the keyword the navigator passed on."""
+                self_outer.searched.append(keyword)
+
+            def init_dir(self, directory):
+                """Remember the directory the navigator passed on."""
+                self_outer.initialised.append(directory)
+
+        self_outer = self
+        self.backend = RecordingBackend()
+        self.session = SearchSession()
+        self.session.row_number = 10
+        self.navigator = SearchNavigator({"Recording": self.backend}, self.session)
+
+    def test_a_directory_that_is_not_a_string_is_skipped(self):
+        """An empty answer from Emacs does not reach the backends.
+
+        This is the crash that left the menu empty: the start directory
+        arrived as False, a backend handed it to `os.path.expanduser', and
+        the TypeError came back through EPC instead of any candidate.
+        """
+        with mock.patch("core.navigator.logger"):
+            self.navigator.search_init_search_dir(False)
+        self.assertEqual(self.initialised, [])
+
+    def test_an_empty_directory_is_skipped(self):
+        """An empty string is not a directory either."""
+        with mock.patch("core.navigator.logger"):
+            self.navigator.search_init_search_dir("")
+        self.assertEqual(self.initialised, [])
+
+    def test_a_real_directory_reaches_every_backend(self):
+        """A directory a backend knows what to do with is passed on."""
+        self.navigator.search_init_search_dir("/tmp/project")
+        self.assertEqual(self.initialised, ["/tmp/project"])
+
+    def test_a_search_still_starts_without_a_directory(self):
+        """A search with no directory still asks the backends to search.
+
+        The backends that run over a directory find nothing without one, but
+        the ones that do not -- the buffer list, the elisp symbols, the
+        history -- still answer, which is what keeps the menu useful.
+        """
+        with mock.patch("core.navigator.get_emacs_vars", return_value=[False, False]), \
+             mock.patch("core.navigator.get_emacs_var", return_value=""), \
+             mock.patch("core.navigator.logger"):
+            self.navigator.start_search("blink", 10, ["Recording"])
+
+        self.assertEqual(self.searched, ["blink"])
+        self.assertEqual(self.initialised, [])

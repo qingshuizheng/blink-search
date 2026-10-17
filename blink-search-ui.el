@@ -168,22 +168,50 @@ candidate buffers want."
 
       (blink-search-select-window (get-buffer-window blink-search-input-buffer)))))
 
-(defun blink-search-posframe-show (buffer)
-  "Show BUFFER in a posframe that is sized by the posframe options."
+(defun blink-search-posframe-parent-frame ()
+  "Return a live frame that is not blink-search's own posframe.
+
+`posframe-show' makes the popup a child of the selected frame, and it
+refuses a frame that is its own parent with \"Circular specification of
+`parent-frame'\".  That happens when the posframe of an earlier session is
+still selected: it is hidden rather than killed, so the next visit finds it
+as the selected frame and hands it to `posframe-show' as the parent of
+itself.  The frame the menu was started from is the right parent, and any
+real frame is better than the posframe."
+  (let ((posframe blink-search-posframe-frame))
+    (or (and (frame-live-p blink-search-posframe-emacs-frame)
+             (not (eq blink-search-posframe-emacs-frame posframe))
+             blink-search-posframe-emacs-frame)
+        (and (frame-live-p (selected-frame))
+             (not (eq (selected-frame) posframe))
+             (selected-frame))
+        (seq-find (lambda (frame)
+                    (and (frame-live-p frame) (not (eq frame posframe))))
+                  (frame-list))
+        (selected-frame))))
+
+(defun blink-search-posframe-show (buffer &optional parent)
+  "Show BUFFER in a posframe that is sized by the posframe options.
+
+PARENT is the frame the popup hangs from; it must not be the popup itself,
+so it is passed explicitly rather than left to `posframe-show' and the
+selected frame."
   (let* ((posframe-height (round (* (frame-height) blink-search-posframe-height-ratio)))
          (posframe-width (round (* (frame-width) blink-search-posframe-width-ratio))))
     (apply #'posframe-show
            (get-buffer buffer)
            :poshandler #'posframe-poshandler-frame-center
-           (list
-            :max-height posframe-height
-            :min-height posframe-height
-            :min-width  posframe-width
-            :max-width  posframe-width
-            :border-width 2
-            :border-color "gray"
-            :accept-focus (equal buffer blink-search-input-buffer)
-            ))))
+           (append
+            (list :parent-frame (or parent (blink-search-posframe-parent-frame)))
+            (list
+             :max-height posframe-height
+             :min-height posframe-height
+             :min-width  posframe-width
+             :max-width  posframe-width
+             :border-width 2
+             :border-color "gray"
+             :accept-focus (equal buffer blink-search-input-buffer)
+             )))))
 
 (defun blink-search-init-bottom-layout ()
   "Lay the four blink-search buffers out in the selected window."
@@ -218,8 +246,17 @@ candidate buffers want."
 
 (defun blink-search-init-popup-layout ()
   "Lay the four blink-search buffers out inside a posframe popup."
-  (setq blink-search-posframe-emacs-frame (selected-frame))
-  (setq blink-search-posframe-frame (blink-search-posframe-show blink-search-input-buffer))
+  ;; Choose the frame to hang the popup from before creating it, and go back
+  ;; to it when a posframe of an earlier session is what is selected right
+  ;; now.  Otherwise the popup would be told to become its own child.
+  (let ((parent (blink-search-posframe-parent-frame)))
+    (setq blink-search-posframe-emacs-frame parent)
+    (when (and (frame-live-p blink-search-posframe-frame)
+               (eq (selected-frame) blink-search-posframe-frame))
+      (make-frame-invisible blink-search-posframe-frame)
+      (select-frame-set-input-focus parent))
+    (setq blink-search-posframe-frame
+          (blink-search-posframe-show blink-search-input-buffer parent)))
 
   (when blink-search-posframe-standalone
     (set-frame-parameter blink-search-posframe-frame 'parent-frame nil))

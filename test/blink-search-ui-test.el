@@ -57,3 +57,36 @@
 
 (provide 'blink-search-ui-test)
 ;;; blink-search-ui-test.el ends here
+
+;;; The parent of the popup frame.
+
+(ert-deftest blink-search-posframe-parent-avoids-the-stale-posframe ()
+  "The parent is never the posframe itself.
+
+`posframe-show' refuses a frame that is its own parent, and the posframe of
+an earlier session is hidden rather than killed, so it can still be the
+selected frame when the menu opens again."
+  (let ((blink-search-posframe-frame 'stale)
+        (blink-search-posframe-emacs-frame 'stale))
+    (cl-letf (((symbol-function 'frame-live-p) (lambda (&rest _) t))
+              ((symbol-function 'selected-frame) (lambda () 'stale))
+              ((symbol-function 'frame-list) (lambda () '(stale real))))
+      (should (eq (blink-search-posframe-parent-frame) 'real)))))
+
+(ert-deftest blink-search-posframe-parent-prefers-the-starting-frame ()
+  "The frame the menu was started from is used when it is still alive."
+  (let ((blink-search-posframe-frame 'stale)
+        (blink-search-posframe-emacs-frame 'origin))
+    (cl-letf (((symbol-function 'frame-live-p) (lambda (&rest _) t))
+              ((symbol-function 'selected-frame) (lambda () 'stale))
+              ((symbol-function 'frame-list) (lambda () '(stale origin))))
+      (should (eq (blink-search-posframe-parent-frame) 'origin)))))
+
+(ert-deftest blink-search-posframe-show-passes-the-parent ()
+  "The parent is handed to `posframe-show' rather than left to it."
+  (let (captured)
+    (cl-letf (((symbol-function 'posframe-show)
+               (lambda (&rest args) (setq captured args) 'popup)))
+      (blink-search-posframe-show (get-buffer-create " *blink-search-test*") 'origin))
+    ;; the first element is the buffer, so the plist starts after it
+    (should (eq (plist-get (cdr captured) :parent-frame) 'origin))))

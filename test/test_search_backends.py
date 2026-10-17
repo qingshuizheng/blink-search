@@ -429,3 +429,22 @@ class KeyValueStorePathTest(unittest.TestCase):
                 self.assertTrue(os.path.exists(path))
             finally:
                 backend.clean()
+
+
+class FindFileWithoutADirectoryTest(unittest.TestCase):
+    """A backend that never got a directory answers nothing, and does not raise.
+
+    The navigator only calls `init_dir' when Emacs handed it a directory, so
+    "no directory yet" is a normal state, not a programming error.  The
+    backend used to raise AttributeError out of its search thread, where the
+    traceback lands in the *blink-search* buffer and the menu silently stays
+    empty.
+    """
+
+    def test_an_empty_prefix_without_a_directory_is_empty(self):
+        """Listing a directory that is not known yet gives no candidate."""
+        self.assertEqual(SearchFindFile().search_match(""), [])
+
+    def test_a_keyword_without_a_directory_is_empty(self):
+        """Searching a project that is not known yet gives no candidate."""
+        self.assertEqual(SearchFindFile().search_match("blink"), [])

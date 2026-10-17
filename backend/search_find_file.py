@@ -47,6 +47,19 @@ class SearchFindFile(SearchBackend):
 
     NAME = "Find File"
 
+    def __init__(self):
+        """Build a backend that does not know its directory yet.
+
+        The navigator only calls `init_dir' when Emacs gave it a directory,
+        so a backend that is asked to search before that has to answer an
+        empty list rather than raise out of the search thread: the traceback
+        would land in the *blink-search* buffer and the menu would simply
+        stay empty.
+        """
+        super().__init__()
+        self.search_dir = ""
+        self.search_path = ""
+
     def init_dir(self, search_dir: str) -> None:
         """Remember the directory the search starts from.
 
@@ -58,6 +71,9 @@ class SearchFindFile(SearchBackend):
 
     def search_match(self, prefix):
         """Return the paths of the files under the project that match PREFIX."""
+        if not self.search_path:
+            return []
+
         prefix = prefix.replace("*", "")
         if len(prefix.split()) > 0:
             if shutil.which("fd"):

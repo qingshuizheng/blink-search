@@ -176,9 +176,10 @@ Python 单测全绿；两侧协议版本一致。
     **backend 模块名**推导（=search_eaf_browser_history_update=），从类名
     推导会得到 =e_a_f_...= 这种错名；
   - =core/session.py=：候选表与两个渲染窗口、选择与分组跳转；新增
-    =window_size=（窗口实际行数）—— 上游用 =row_number= 去做滚动算术，
-    但窗口是若干 backend 切片拼起来的，可能短于 =row_number=，于是候选多时
-    选择会卡在第 5 行左右走不下去，这是重构中实际修掉的 bug；
+    =window_size=（窗口实际行数），并把移动改写成「绝对位置 + 最小滚动」。
+    **注意**：这一项早先在这里被写成「修掉了滚动卡死的 bug」，那是没验证
+    的说法，已在 =CORRECTIONS.org= 更正——两种写法选中的候选与顺序完全
+    一致，重写只是更清楚、并且现在有测试覆盖；
   - =core/navigator.py=：默认 backend 列表 / PDF 条件加入 / 目录初始化 /
     历史记录与回放；
   - =core/search.py= 删除（其 =Search= 就是新的 =SearchBackend=）；

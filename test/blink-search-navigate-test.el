@@ -151,5 +151,36 @@
     (blink-search-goto-column 3)
     (should (= (point) (+ (point-min) 3)))))
 
+
+;;; The wire convention of a call into Python.
+
+(ert-deftest blink-search-call-async-passes-a-flat-argument-list ()
+  "The arguments reach `call-deferred' as one flat list.
+
+`blink-search-epc-call-deferred' writes `(call UID METHOD ARGS)' and
+python-epc spreads ARGS into the method's parameters.  Wrapping the list once
+more -- `(list args)' -- makes `search' receive its three arguments as one,
+and the search process answers that two required positional arguments are
+missing.  That is a mistake that only shows up against the real Python half,
+so it is pinned here on the Elisp side."
+  (let (captured)
+    (cl-letf (((symbol-function 'blink-search-epc-live-p) (lambda (&rest _) t))
+              ((symbol-function 'blink-search-epc-call-deferred)
+               (lambda (_mngr method args) (setq captured (cons method args)))))
+      (blink-search-call-async "search" "blink" 10 '("Buffer List")))
+    (should (equal (car captured) 'search))
+    (should (equal (cdr captured) '("blink" 10 ("Buffer List"))))
+    ;; and not one element holding the list
+    (should (= (length (cdr captured)) 3))))
+
+(ert-deftest blink-search-call-async-keeps-a-list-argument-a-list ()
+  "An argument that is itself a list stays one argument of that type."
+  (let (captured)
+    (cl-letf (((symbol-function 'blink-search-epc-live-p) (lambda (&rest _) t))
+              ((symbol-function 'blink-search-epc-call-deferred)
+               (lambda (_mngr method args) (setq captured (cons method args)))))
+      (blink-search-call-async "search_elisp_symbol_update" '("a" "b")))
+    (should (equal (cdr captured) '(("a" "b"))))))
+
 (provide 'blink-search-navigate-test)
 ;;; blink-search-navigate-test.el ends here

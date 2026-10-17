@@ -77,8 +77,7 @@
   "The symbol list is only sent when the number of symbols changed.
 
 The backend runs on an idle timer, so a payload that is sent on every tick
-would keep the Python process busy for nothing.
-"
+would keep the Python process busy for nothing."
   (let ((blink-search-elisp-symbol-size 0)
         (blink-search-elisp-symbol-timer nil))
     (cl-letf (((symbol-function 'blink-search-elisp-local-symbols) (lambda () nil))
@@ -161,8 +160,7 @@ would keep the Python process busy for nothing.
 
 The file has to exist for `find-file' to open it, so this test only says
 that the jump itself does not raise; the path arithmetic is what the Python
-tests cover.
-"
+tests cover."
   (let ((blink-search-grep-file-temp-buffers nil))
     (cl-letf (((symbol-function 'find-file) #'ignore)
               ((symbol-function 'blink-search-flash-locate) #'ignore)
@@ -192,8 +190,7 @@ tests cover.
 The pending timer is what makes this observable without a viewer: the
 preview is cancelled before the viewer is told to drop its buffers, so a
 timer that survives the call is a preview that would fire after the menu is
-gone.
-"
+gone."
   (let* ((timer (run-with-idle-timer 100 t #'ignore))
          (blink-search-pdf-preview-timer timer)
          (blink-search-grep-file-temp-buffers nil))

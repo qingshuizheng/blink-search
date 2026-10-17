@@ -55,7 +55,16 @@ $EMACS -Q --batch $LOAD_PATH -l scripts/check-bodies.el \
 
 echo "== byte-compile $COUNT file(s) -> $ELC_DIR"
 # shellcheck disable=SC2086
-$EMACS -Q --batch $LOAD_PATH --eval "$redir" -f batch-byte-compile $FILES
+compile_out=$($EMACS -Q --batch $LOAD_PATH --eval "$redir" -f batch-byte-compile $FILES 2>&1) || {
+    printf '%s\n' "$compile_out"
+    exit 1
+}
+printf '%s\n' "$compile_out" | grep -v '^$' | grep -v '^Loading ' || true
+WARNINGS=$(printf '%s\n' "$compile_out" | grep -c 'Warning' || true)
+if [ "$WARNINGS" -gt 0 ]; then
+    echo "FAILED: $WARNINGS byte-compile warning(s); the tree is kept at zero"
+    exit 1
+fi
 
 # A file can compile cleanly in the batch above and still fail on its own: the
 # batch is sorted, so a file that only defines a variable another file reads
@@ -86,6 +95,14 @@ if [ "${CHECKDOC:-0}" = 1 ]; then
             *) DOC_FILES="$DOC_FILES \"$f\"" ;;
         esac
     done
-    $EMACS -Q --batch $LOAD_PATH --eval "$redir" --eval \
-        "(dolist (f (list $DOC_FILES)) (checkdoc-file f))"
+    # checkdoc writes to stderr as "Warning (emacs): ...", so a run that
+    # finds anything has to be counted rather than trusted to the exit code.
+    doc_out=$($EMACS -Q --batch $LOAD_PATH --eval "$redir" --eval \
+        "(dolist (f (list $DOC_FILES)) (checkdoc-file f))" 2>&1)
+    printf '%s\n' "$doc_out" | grep -v '^$' || true
+    DOC_FINDINGS=$(printf '%s\n' "$doc_out" | grep -c 'Warning (emacs)' || true)
+    if [ "$DOC_FINDINGS" -gt 0 ]; then
+        echo "FAILED: $DOC_FINDINGS checkdoc finding(s)"
+        exit 1
+    fi
 fi

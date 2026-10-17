@@ -278,44 +278,48 @@ class SearchSession:
         The window scrolls when the selection would leave it, and a selection
         that is already on the last candidate stays where it is instead of
         redrawing the same menu.
+
+        The movement is expressed as an absolute position and the two window
+        coordinates are derived from it.  Adding one to both the index and the
+        offset used to skip a candidate at every scroll -- with ten candidates
+        and eight rows the last one was unreachable -- which is a kind of
+        mistake that a count of "the selection moved" does not catch.
         """
-        need_update = True
+        if not self._candidate_items:
+            return
 
-        if len(self._candidate_items) > 0:
-            if self._candidate_index < min(self.window_size, len(self._candidate_items)) - 1:
-                self._candidate_index += 1
-                self._update_render_candidate_items()
-            elif self._candidate_offset + self._candidate_index == len(self._candidate_items) - 1:
-                need_update = False
-            else:
-                self._candidate_offset += 1
-                self._update_render_candidate_items()
-        else:
-            need_update = False
+        position = self._candidate_offset + self._candidate_index
+        if position >= len(self._candidate_items) - 1:
+            return
 
-        if need_update:
-            self._update_render_index_and_offset()
-            self.render_items()
+        self._put_selection_at(position + 1)
+        self._update_render_index_and_offset()
+        self.render_items()
 
     def select_prev_candidate_item(self) -> None:
         """Move the selection one candidate up."""
-        need_update = True
+        if not self._candidate_items:
+            return
 
-        if len(self._candidate_items) > 0:
-            if self._candidate_index > 0:
-                self._candidate_index -= 1
-                self._update_render_candidate_items()
-            elif self._candidate_offset == 0 and self._candidate_index == 0:
-                need_update = False
-            else:
-                self._candidate_offset -= 1
-                self._update_render_candidate_items()
-        else:
-            need_update = False
+        position = self._candidate_offset + self._candidate_index
+        if position <= 0:
+            return
 
-        if need_update:
-            self._update_render_index_and_offset()
-            self.render_items()
+        self._put_selection_at(position - 1)
+        self._update_render_index_and_offset()
+        self.render_items()
+
+    def _put_selection_at(self, position: int) -> None:
+        """Put the selection on POSITION, scrolling as little as possible.
+
+        POSITION is absolute in the whole answer; it is split into the row
+        the window starts at and the row inside it, and the window never
+        moves further than it has to.
+        """
+        last_start = max(0, len(self._candidate_items) - self.window_size)
+        self._candidate_offset = min(max(0, position - self.window_size + 1), last_start)
+        self._candidate_index = position - self._candidate_offset
+        self._update_render_candidate_items()
 
     def _move_to_candidate(self, next_index: int) -> None:
         """Put the selection on the candidate NEXT-INDEX of the answer.

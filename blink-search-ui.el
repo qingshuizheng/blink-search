@@ -177,6 +177,21 @@ of the keyword, and binding it there would make the key untypeable."
     (when quit-on-q
       (local-set-key (kbd "q") #'blink-search-quit))))
 
+(defun blink-search-posframe-p (frame)
+  "Return non-nil when FRAME is a posframe of the blink-search input buffer.
+
+The frame is recognised by the `posframe-buffer' parameter that
+`posframe-show' puts on it, not by `blink-search-posframe-frame': that
+variable is set to nil when the menu is left, and a popup it no longer names
+would be taken for a real frame -- as a parent for the popup itself, which
+`posframe-show' refuses with \"Circular specification of `parent-frame'\"."
+  (and (framep frame)
+       (frame-live-p frame)
+       (let ((buffer (frame-parameter frame 'posframe-buffer)))
+         (cond ((consp buffer) (equal (car buffer) blink-search-input-buffer))
+               ((stringp buffer) (equal buffer blink-search-input-buffer))
+               (t nil)))))
+
 (defun blink-search-posframe-parent-frame ()
   "Return a live frame that is not blink-search's own posframe.
 `posframe-show' makes the popup a child of the selected frame, and it
@@ -186,17 +201,35 @@ still selected: it is hidden rather than killed, so the next visit finds it
 as the selected frame and hands it to `posframe-show' as the parent of
 itself.  The frame the menu was started from is the right parent, and any
 real frame is better than the posframe."
-  (let ((posframe blink-search-posframe-frame))
-    (or (and (frame-live-p blink-search-posframe-emacs-frame)
-             (not (eq blink-search-posframe-emacs-frame posframe))
-             blink-search-posframe-emacs-frame)
-        (and (frame-live-p (selected-frame))
-             (not (eq (selected-frame) posframe))
-             (selected-frame))
-        (seq-find (lambda (frame)
-                    (and (frame-live-p frame) (not (eq frame posframe))))
-                  (frame-list))
-        (selected-frame))))
+  (or (and (frame-live-p blink-search-posframe-emacs-frame)
+           (not (blink-search-posframe-p blink-search-posframe-emacs-frame))
+           blink-search-posframe-emacs-frame)
+      (and (frame-live-p (selected-frame))
+           (not (blink-search-posframe-p (selected-frame)))
+           (selected-frame))
+      (seq-find (lambda (frame)
+                  (and (frame-live-p frame) (not (blink-search-posframe-p frame))))
+                (frame-list))
+      (selected-frame)))
+
+(defun blink-search-select-frame-guard (function frame &rest arguments)
+  "Call FUNCTION on FRAME with ARGUMENTS, but never on a hidden popup.
+
+The popup is hidden rather than deleted when the menu is left, and a hidden
+child frame can still report `frame-focus-state'.  Selecting it -- which is
+what an emacsclient command often begins with -- makes macOS show it again,
+so a menu the user had left came back.  Such a selection goes to the parent
+frame instead; opening the menu is unaffected, because `posframe-show' makes
+the frame visible before it is selected."
+  (if (and (blink-search-posframe-p frame)
+           (not (frame-visible-p frame)))
+      (let ((parent (frame-parent frame)))
+        (when (and parent (frame-live-p parent))
+          (apply function parent arguments)))
+    (apply function frame arguments)))
+
+(advice-add 'select-frame-set-input-focus :around #'blink-search-select-frame-guard)
+(advice-add 'select-frame :around #'blink-search-select-frame-guard)
 
 (defun blink-search-posframe-show (buffer &optional parent)
   "Show BUFFER in a posframe that is sized by the posframe options.

@@ -68,7 +68,15 @@ an earlier session is hidden rather than killed, so it can still be the
 selected frame when the menu opens again."
   (let ((blink-search-posframe-frame 'stale)
         (blink-search-posframe-emacs-frame 'stale))
-    (cl-letf (((symbol-function 'frame-live-p) (lambda (&rest _) t))
+    (cl-letf (((symbol-function 'framep) (lambda (&rest _) t))
+              ((symbol-function 'frame-live-p) (lambda (&rest _) t))
+              ;; `stale' is the popup, recognised by its frame parameter even
+              ;; though it is the remembered frame as well
+              ((symbol-function 'frame-parameter)
+               (lambda (frame parameter)
+                 (and (eq parameter 'posframe-buffer)
+                      (eq frame 'stale)
+                      (cons blink-search-input-buffer (get-buffer-create " *stale*")))))
               ((symbol-function 'selected-frame) (lambda () 'stale))
               ((symbol-function 'frame-list) (lambda () '(stale real))))
       (should (eq (blink-search-posframe-parent-frame) 'real)))))
@@ -78,6 +86,7 @@ selected frame when the menu opens again."
   (let ((blink-search-posframe-frame 'stale)
         (blink-search-posframe-emacs-frame 'origin))
     (cl-letf (((symbol-function 'frame-live-p) (lambda (&rest _) t))
+              ((symbol-function 'frame-parameter) (lambda (&rest _) nil))
               ((symbol-function 'selected-frame) (lambda () 'stale))
               ((symbol-function 'frame-list) (lambda () '(stale origin))))
       (should (eq (blink-search-posframe-parent-frame) 'origin)))))
@@ -110,3 +119,50 @@ it has to stay a letter."
           (with-current-buffer buffer
             (should (eq (key-binding (kbd "q")) 'blink-search-quit))))
       (kill-buffer buffer))))
+
+(ert-deftest blink-search-posframe-p-recognises-the-popup-by-its-parameter ()
+  "A popup is recognised even when its frame variable is nil.
+
+`blink-search-quit' forgets the frame, and a frame it no longer names was
+then taken for a real one -- as a parent for the popup itself, which
+`posframe-show' refuses it as a circular parent."
+  (let ((blink-search-input-buffer " *blink-search-test-input*"))
+    (cl-letf (((symbol-function 'framep) (lambda (&rest _) t))
+              ((symbol-function 'frame-live-p) (lambda (&rest _) t))
+              ((symbol-function 'frame-parameter)
+               (lambda (_frame parameter)
+                 (and (eq parameter 'posframe-buffer)
+                      (cons blink-search-input-buffer
+                            (get-buffer-create " *blink-search-test-parent*"))))))
+      (should (blink-search-posframe-p 'a-child-frame)))))
+
+(ert-deftest blink-search-select-frame-guard-goes-to-the-parent ()
+  "Selecting a hidden popup selects its parent instead."
+  (let ((blink-search-input-buffer " *blink-search-test-input*")
+        selected)
+    (cl-letf (((symbol-function 'framep) (lambda (&rest _) t))
+              ((symbol-function 'frame-live-p) (lambda (&rest _) t))
+              ((symbol-function 'frame-visible-p) (lambda (&rest _) nil))
+              ((symbol-function 'frame-parent) (lambda (&rest _) 'the-main-frame))
+              ((symbol-function 'frame-parameter)
+               (lambda (_frame parameter)
+                 (and (eq parameter 'posframe-buffer)
+                      (cons blink-search-input-buffer
+                            (get-buffer-create " *blink-search-test-parent*")))))
+              ((symbol-function 'select-frame-set-input-focus)
+               (lambda (frame &rest _) (setq selected frame))))
+      (blink-search-select-frame-guard #'select-frame-set-input-focus 'popup))
+    (should (eq selected 'the-main-frame))))
+
+(ert-deftest blink-search-select-frame-guard-leaves-other-frames-alone ()
+  "A frame that is not a hidden popup is selected as asked."
+  (let ((blink-search-input-buffer " *blink-search-test-input*")
+        selected)
+    (cl-letf (((symbol-function 'framep) (lambda (&rest _) t))
+              ((symbol-function 'frame-live-p) (lambda (&rest _) t))
+              ((symbol-function 'frame-visible-p) (lambda (&rest _) t))
+              ((symbol-function 'frame-parameter) (lambda (&rest _) nil))
+              ((symbol-function 'select-frame-set-input-focus)
+               (lambda (frame &rest _) (setq selected frame))))
+      (blink-search-select-frame-guard #'select-frame-set-input-focus 'real-frame))
+    (should (eq selected 'real-frame))))

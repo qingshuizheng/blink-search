@@ -70,12 +70,15 @@ called from is cleared."
   ;; The closing goes through `posframe-hide' when posframe is loaded: a bare
   ;; `make-frame-invisible' followed by selecting the parent frame brought
   ;; the child back on macOS, so the menu looked like it ignored the key.
-  (when (and blink-search-enable-posframe
-             (frame-live-p blink-search-posframe-frame))
-    (let ((buffer (get-buffer blink-search-input-buffer)))
-      (if (and buffer (fboundp 'posframe-hide))
-          (posframe-hide buffer)
-        (make-frame-invisible blink-search-posframe-frame))))
+  (let ((buffer (get-buffer blink-search-input-buffer)))
+    (cond
+     ((and buffer (fboundp 'posframe-hide))
+      ;; `posframe-hide' hides every posframe of the buffer, not just the one
+      ;; this variable happens to hold: a popup whose frame was already
+      ;; forgotten is the one that otherwise stays on screen for good.
+      (posframe-hide buffer))
+     ((frame-live-p blink-search-posframe-frame)
+      (make-frame-invisible blink-search-posframe-frame))))
   ;; A hidden frame may already be gone -- on macOS the child frame does not
   ;; always survive the parent taking the focus back.  Forgotten, so the next
   ;; menu opens a fresh one.

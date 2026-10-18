@@ -210,3 +210,18 @@ search -- opening a file the user did not select in this one."
 
 (provide 'blink-search-navigate-test)
 ;;; blink-search-navigate-test.el ends here
+
+(ert-deftest blink-search-quit-hides-a-popup-it-has-forgotten ()
+  "The popup is hidden even when its frame variable is already nil.
+
+A quit that ran when the variable was nil left the frame on screen, and no
+later quit looked at it again: the popup stayed visible for good."
+  (let ((blink-search-enable-posframe t)
+        (blink-search-posframe-frame nil)
+        (blink-search-posframe-emacs-frame nil)
+        (blink-search-window-configuration nil)
+        hidden)
+    (cl-letf (((symbol-function 'posframe-hide) (lambda (buffer) (setq hidden buffer)))
+              ((symbol-function 'blink-search-call-async) #'ignore))
+      (blink-search-quit))
+    (should (equal hidden (get-buffer blink-search-input-buffer)))))

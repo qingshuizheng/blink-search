@@ -48,14 +48,12 @@
   "Blink-Search: search many sources in the blink of an eye."
   :group 'applications)
 
-
 ;;
 ;; Options.
 ;;
 
 (defcustom blink-search-enable-posframe nil
   "Render the search results in a popup window instead of a split window.
-
 The popup needs posframe, see `blink-search-posframe-width-ratio' and
 `blink-search-posframe-height-ratio' for its size."
   :type 'boolean
@@ -73,7 +71,6 @@ The popup needs posframe, see `blink-search-posframe-width-ratio' and
 
 (defcustom blink-search-posframe-standalone nil
   "If non-nil, display the posframe as a standalone frame.
-
 A standalone frame has no parent frame, so it can be moved outside of
 the Emacs window by the window manager."
   :type 'boolean
@@ -86,7 +83,6 @@ the Emacs window by the window manager."
 
 (defcustom blink-search-common-directory '(("HOME" "~/"))
   "Common directory to search and open.
-
 Each element is a list of the name shown in the menu and the path it
 stands for."
   :type '(repeat (list string string))
@@ -121,7 +117,6 @@ stands for."
 
 (defcustom blink-search-enable-debug nil
   "Start the Python process under gdb and print its backtrace.
-
 Turn this on when blink-search makes Emacs crash: the `*blink-search*'
 buffer then holds the backtrace to attach to the bug report."
   :type 'boolean
@@ -129,7 +124,6 @@ buffer then holds the backtrace to attach to the bug report."
 
 (defcustom blink-search-enable-log nil
   "Print every log message of the Python half in `*blink-search*'.
-
 The buffer always shows the message headers; this option turns on the
 verbose logging behind them."
   :type 'boolean
@@ -137,14 +131,12 @@ verbose logging behind them."
 
 (defcustom blink-search-flash-line-delay .3
   "How many seconds to flash `blink-search-font-lock-flash' after navigation.
-
 Setting this to nil or 0 will turn off the indicator."
   :type 'number
   :group 'blink-search)
 
 (defcustom blink-search-search-backends nil
   "Default backends for blink-search.
-
 A list of backend names as the Python half spells them, or nil for all
 backends defined in Python.  For example, set this option to
 `(\"Buffer List\" \"Find File\")' to search only those two."
@@ -153,7 +145,6 @@ backends defined in Python.  For example, set this option to
 
 (defcustom blink-search-browser-function #'eaf-open-browser
   "The function used to open a web page for a google suggestion.
-
 It is called with the URL as its only argument, through
 `blink-search-open-browser'."
   :type 'function
@@ -224,7 +215,6 @@ the `M + KEY' bindings conflicts with a command of your own."
   :type '(repeat string)
   :group 'blink-search)
 
-
 ;;
 ;; Faces.
 ;;
@@ -238,7 +228,6 @@ the `M + KEY' bindings conflicts with a command of your own."
   '((t (:inherit highlight)))
   "Face to flash the current line."
   :group 'blink-search)
-
 
 ;;
 ;; Buffers.
@@ -255,7 +244,6 @@ the `M + KEY' bindings conflicts with a command of your own."
 
 (defvar blink-search-backend-buffer " *blink search backend*"
   "Name of the buffer that shows the other candidates of one backend.")
-
 
 ;;
 ;; Where the search started.
@@ -281,10 +269,8 @@ the `M + KEY' bindings conflicts with a command of your own."
 
 (defvar blink-search-start-keyword nil
   "Keyword `blink-search' starts with.
-
 It comes from the active region, or from the symbol at point when
 `blink-search' is called with a prefix argument.")
-
 
 ;;
 ;; The answer of the last search, as the Python half rendered it.
@@ -314,7 +300,6 @@ It comes from the active region, or from the symbol at point when
 (defvar blink-search-backend-number nil
   "Number of backends that returned a candidate.")
 
-
 ;;
 ;; The posframe popup, when `blink-search-enable-posframe' is non-nil.
 ;;
@@ -327,7 +312,6 @@ It comes from the active region, or from the symbol at point when
 
 (defvar blink-search-posframe-frame nil
   "The posframe popup frame itself.")
-
 
 ;;
 ;; The Python process.
@@ -374,16 +358,13 @@ derived from it.")
 
 (defvar blink-search-idle-update-list nil
   "Functions run after the Python process answered the first handshake.
-
 Every function here is expected to be cheap; the backends that need to
 push a list to Python only on the first start register here.")
 
 (defvar blink-search-start-update-list nil
   "Functions run when a search session starts.
-
 Every Elisp backend that has to push state to Python before the first
 search registers here.")
 
 (provide 'blink-search-state)
-
 ;;; blink-search-state.el ends here

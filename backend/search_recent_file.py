@@ -37,7 +37,6 @@ class SearchRecentFile(SearchBackend):
 
     NAME = "Recent File"
 
-
     def do(self, candidate):
         """Visit the file CANDIDATE names."""
         eval_in_emacs("find-file", candidate)
@@ -50,4 +49,3 @@ class SearchRecentFile(SearchBackend):
         """
         del from_history
         eval_in_emacs("blink-search-open-file", os.path.dirname(candidate))
-

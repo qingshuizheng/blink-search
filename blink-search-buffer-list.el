@@ -56,7 +56,6 @@
 
 (defun blink-search-buffer-list-update ()
   "Push the names of the open buffers to the Python half.
-
 With sort-tab installed the tab order is preserved, so that the
 candidate list reads the same way as the tab bar."
   (when (blink-search-epc-live-p blink-search-epc-process)
@@ -67,5 +66,4 @@ candidate list reads the same way as the tab bar."
 (add-to-list 'blink-search-start-update-list #'blink-search-buffer-list-update t)
 
 (provide 'blink-search-buffer-list)
-
 ;;; blink-search-buffer-list.el ends here

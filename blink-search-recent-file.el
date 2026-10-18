@@ -81,7 +81,6 @@
 
 ;;; Require
 
-
 ;;; Code:
 
 (require 'blink-search-state)
@@ -101,7 +100,6 @@
 
 (defun blink-search-recent-file-update ()
   "Push the recent file list to the Python half when it has changed.
-
 The list is only sent when its length changed, so that the idle timer
 stays cheap on a large `recentf-list'.  The names are copied with
 `substring-no-properties', because a text property in a file name would
@@ -129,5 +127,4 @@ make the Python half see a different string than the one on disk."
 (add-to-list 'blink-search-idle-update-list #'blink-search-start-recent-file-update t)
 
 (provide 'blink-search-recent-file)
-
 ;;; blink-search-recent-file.el ends here

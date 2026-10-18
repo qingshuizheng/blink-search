@@ -81,7 +81,6 @@
 
 ;;; Require
 
-
 ;;; Code:
 
 (require 'blink-search-state)
@@ -90,7 +89,6 @@
 
 (defun blink-search-init-current-buffer ()
   "Hand the content of the start buffer to the Python half.
-
 The content is base64 encoded, so that a buffer with mixed encodings or
 with NUL bytes survives the EPC round trip."
   (when (blink-search-epc-live-p blink-search-epc-process)
@@ -106,7 +104,6 @@ with NUL bytes survives the EPC round trip."
 
 (defun blink-search-current-buffer-preview (buffer line column)
   "Show BUFFER at LINE and COLUMN without leaving the search.
-
 The jump happens from the preview window, so the input window keeps the
 focus and the user can carry on typing."
   (blink-search-select-input-window
@@ -122,5 +119,4 @@ focus and the user can carry on typing."
 (add-to-list 'blink-search-start-update-list #'blink-search-init-current-buffer t)
 
 (provide 'blink-search-current-buffer)
-
 ;;; blink-search-current-buffer.el ends here

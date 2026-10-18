@@ -56,7 +56,6 @@
 
 (defun blink-search-quit ()
   "Leave the search, restoring the window configuration it started with.
-
 The Python half is told to drop its candidates, the posframe popup is
 hidden, and everything `blink-search' recorded about the buffer it was
 called from is cleared."
@@ -122,7 +121,6 @@ called from is cleared."
 
 (defun blink-search-quick-do ()
   "Run the action of the candidate the pressed quick key stands for.
-
 The key is read from `last-command-event', so this command is bound
 once per entry of `blink-search-quick-keys' by `blink-search-mode-map'."
   (interactive)
@@ -141,7 +139,6 @@ once per entry of `blink-search-quick-keys' by `blink-search-mode-map'."
 
 (defun blink-search-goto-column (column)
   "Move point forward to byte COLUMN of the current line.
-
 This is the replacement for `move-to-column' when the line mixes
 Chinese and English characters, which is what ripgrep reports the
 position of a match in."
@@ -200,7 +197,6 @@ position of a match in."
 
 (defun blink-search-get-select-candidate ()
   "Return the text of the selected candidate.
-
 The candidate is taken from the backend buffer when that buffer is
 visible, because the user is then choosing inside the other candidates
 of one backend."
@@ -213,7 +209,6 @@ of one backend."
 
 (defun blink-search-action (action)
   "Run the Python ACTION on the selected candidate and leave the search.
-
 ACTION is an EPC method name, for example \"search_do\"; the backend
 name and the candidate text are passed as its two arguments."
   (interactive)
@@ -266,5 +261,4 @@ name and the candidate text are passed as its two arguments."
   (blink-search-action "search_copy"))
 
 (provide 'blink-search-navigate)
-
 ;;; blink-search-navigate.el ends here

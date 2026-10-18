@@ -258,5 +258,3 @@ class SearchBackend:
                 pass
 
             self.sub_process = None
-
-

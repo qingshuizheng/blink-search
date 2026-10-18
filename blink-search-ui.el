@@ -69,7 +69,6 @@ influence of C1 on the result."
 
 (defun blink-search-init-colors (&optional force)
   "Derive the faces of blink-search from the current theme.
-
 FORCE recomputes the colours even when they are already set, which is
 what a theme change needs."
   ;; Avoid background around input string.
@@ -92,10 +91,8 @@ what a theme change needs."
 
 (defun blink-search-reset-colors (&rest _args)
   "Recompute the blink-search colours and redraw the menu.
-
 It is added as an advice of `load-theme', so it runs whenever the user
 changes the theme."
-  ;; Reset colors.
   (when (get-buffer blink-search-input-buffer)
     (blink-search-init-colors t)
     (blink-search-render)))
@@ -125,13 +122,10 @@ changes the theme."
 
 (defun blink-search-disable-options (&optional disable-cursor)
   "Disable many options for blink-search buffers.
-
 DISABLE-CURSOR also hides the cursor, which is what the tooltip and
 candidate buffers want."
-  ;; Disable line numbers mode.
   (when display-line-numbers
     (setq-local display-line-numbers nil))
-  ;; Disable tab-line.
   (when (version< "27.0" emacs-version)
     (setq-local tab-line-format nil))
   ;; Disable hl-line, header-line and mode-line in input buffer.
@@ -170,7 +164,6 @@ candidate buffers want."
 
 (defun blink-search-bind-quit-keys (buffer)
   "Make `C-g' leave the search from BUFFER too.
-
 The menu keeps the cursor in the input buffer, but a preview can leave the
 focus in another pane, and `C-g' there ran `keyboard-quit', which only beeps
 while the popup stayed on screen."
@@ -180,7 +173,6 @@ while the popup stayed on screen."
 
 (defun blink-search-posframe-parent-frame ()
   "Return a live frame that is not blink-search's own posframe.
-
 `posframe-show' makes the popup a child of the selected frame, and it
 refuses a frame that is its own parent with \"Circular specification of
 `parent-frame'\".  That happens when the posframe of an earlier session is
@@ -202,7 +194,6 @@ real frame is better than the posframe."
 
 (defun blink-search-posframe-show (buffer &optional parent)
   "Show BUFFER in a posframe that is sized by the posframe options.
-
 PARENT is the frame the popup hangs from; it must not be the popup itself,
 so it is passed explicitly rather than left to `posframe-show' and the
 selected frame."
@@ -225,7 +216,6 @@ selected frame."
 
 (defun blink-search-init-bottom-layout ()
   "Lay the four blink-search buffers out in the selected window."
-  ;; Clean layout.
   ;; NOTE: `ignore-errors' make sure start always successfully,
   ;; even no buffer does exist when Emacs first start.
   (ignore-errors
@@ -233,25 +223,20 @@ selected frame."
     (split-window)
     (other-window 1))
 
-  ;; Show input buffer.
   (switch-to-buffer blink-search-input-buffer)
 
-  ;; Show tooltip buffer.
   (split-window (selected-window) (line-pixel-height) 'below t)
   (split-window (selected-window) nil 'right t)
   (other-window 1)
   (switch-to-buffer blink-search-tooltip-buffer)
 
-  ;; Show candidate buffer.
   (other-window 1)
   (switch-to-buffer blink-search-candidate-buffer)
 
-  ;; Show backend buffer.
   (split-window (selected-window) nil 'right t)
   (other-window 1)
   (switch-to-buffer blink-search-backend-buffer)
 
-  ;; Select input window.
   (blink-search-select-window (get-buffer-window blink-search-input-buffer)))
 
 (defun blink-search-init-popup-layout ()
@@ -308,7 +293,6 @@ selected frame."
 
 (cl-defmacro blink-search-select-input-window (&rest body)
   "Run BODY from the preview window, then return to the input window.
-
 The input window is the only window blink-search keeps the cursor in,
 so every action that visits another buffer has to come back to it."
   `(let* ((inhibit-message t)
@@ -324,7 +308,6 @@ so every action that visits another buffer has to come back to it."
 
 (defun blink-search-select-start-buffer (buffer)
   "Switch to BUFFER, the buffer the search was started from.
-
 The switch happens from the preview window, so that the popup layout
 does not lose its input window."
   (unless blink-search-enable-posframe
@@ -333,7 +316,6 @@ does not lose its input window."
 
 (defun blink-search-open-file (candidate)
   "Open CANDIDATE as a file or a directory.
-
 A directory is handed to `blink-search-file-manager'; a file is opened
 by `find-file'."
   (cond ((and (eq blink-search-file-manager 'eaf-file-manager)
@@ -347,7 +329,6 @@ by `find-file'."
 
 (defun blink-search-continue-search (path)
   "Search again, restricted to the directory PATH.
-
 The Python half calls this when the user continues the search from a
 candidate that is a directory."
   (if (file-directory-p path)
@@ -359,5 +340,4 @@ candidate that is a directory."
     (message "[blink-search] '%s' is not directory, can't continue search." path)))
 
 (provide 'blink-search-ui)
-
 ;;; blink-search-ui.el ends here

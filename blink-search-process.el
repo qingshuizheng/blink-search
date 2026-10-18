@@ -54,7 +54,6 @@
 
 (defun blink-search--start-epc-server ()
   "Start the EPC server Emacs listens on and return it.
-
 The server is started once; a second call returns the running one.  The
 EPC methods the Python process may call are registered here, and the
 port is stored in `blink-search-server-port'."
@@ -74,7 +73,6 @@ port is stored in `blink-search-server-port'."
 
 (defun blink-search--eval-in-emacs-func (sexp-string)
   "Evaluate the printed Elisp form SEXP-STRING.
-
 This is the single entry point the Python half uses for every callback
 it wants to run, including `message', `kill-new' and the commands of
 the Elisp backends.  Return nil, because the EPC protocol rejects a
@@ -85,7 +83,6 @@ reply with more than one value."
 
 (defun blink-search--get-emacs-var-func (var-name)
   "Return the value of the Emacs variable named VAR-NAME.
-
 The result is a list of the value and of whether the value is a
 boolean, printed as a string: python-epc turns a nil into an empty
 list, so the flag is what lets the Python half tell nil from t."
@@ -103,7 +100,6 @@ list, so the flag is what lets the Python half tell nil from t."
 
 (defun blink-search-call-async (method &rest args)
   "Call Python EPC function METHOD and ARGS asynchronously.
-
 ARGS is passed as **one list**, not spread, and that is the whole
 convention: `blink-search-epc-call-deferred' writes the wire form
 `(call UID METHOD ARGS)', python-epc hands the element after the method name
@@ -117,7 +113,6 @@ arguments were missing."
 
 (defun blink-search-open-browser (url)
   "Open URL in the browser `blink-search-browser-function' names.
-
 The Python half calls this instead of calling
 `blink-search-browser-function' directly: the option holds a function
 name, and only the variable is customised, never a function cell, so a
@@ -149,7 +144,6 @@ loaded."
                                (list (number-to-string blink-search-server-port))
                                )))
 
-      ;; Set process arguments.
       (if blink-search-enable-debug
           (progn
             (setq blink-search-internal-process-prog "gdb")
@@ -157,7 +151,6 @@ loaded."
         (setq blink-search-internal-process-prog blink-search-python-command)
         (setq blink-search-internal-process-args blink-search-args))
 
-      ;; Start python process.
       (let ((process-connection-type (not (blink-search--called-from-wsl-on-windows-p))))
         (setq blink-search-internal-process
               (apply 'start-process
@@ -206,7 +199,6 @@ loaded."
 
 (defun blink-search--first-start (blink-search-epc-port)
   "Build the EPC layer from the port BLINK-SEARCH-EPC-PORT the server chose.
-
 The Python process announces its port with `blink-search--first-start'
 once its EPC server is up.  This sets up the manager Emacs talks to the
 Python process through, clears `blink-search-is-starting', and runs the
@@ -229,5 +221,4 @@ start up lists so that every backend pushes its state to Python."
     (funcall update-func)))
 
 (provide 'blink-search-process)
-
 ;;; blink-search-process.el ends here

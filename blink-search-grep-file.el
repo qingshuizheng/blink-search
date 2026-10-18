@@ -81,7 +81,6 @@
 
 ;;; Require
 
-
 ;;; Code:
 
 (require 'blink-search-state)
@@ -90,7 +89,6 @@
 
 (defvar blink-search-grep-file-temp-buffers nil
   "Buffers a preview opened that were not open before it.
-
 `blink-search-grep-file-clean' kills them again when the user leaves
 the search, so that previewing a match does not leave a buffer behind
 for every candidate the cursor passed over.")
@@ -105,7 +103,6 @@ for every candidate the cursor passed over.")
 
 (defun blink-search-grep-file-do (file line column)
   "Visit FILE, go to LINE and COLUMN, then flash the line.
-
 A line or column that no longer exists is ignored: the file may have
 changed since ripgrep read it."
   (find-file file)
@@ -116,7 +113,6 @@ changed since ripgrep read it."
 
 (defun blink-search-grep-file-preview (file line column)
   "Preview the match at LINE and COLUMN of FILE.
-
 The buffer is remembered in `blink-search-grep-file-temp-buffers' when
 the file was not open before, so that `blink-search-grep-file-clean'
 can close it again."
@@ -135,5 +131,4 @@ can close it again."
   (setq blink-search-grep-file-temp-buffers nil))
 
 (provide 'blink-search-grep-file)
-
 ;;; blink-search-grep-file.el ends here

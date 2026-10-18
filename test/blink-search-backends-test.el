@@ -59,7 +59,6 @@
   "Return the Emacs calls of RESULT."
   (nth 1 result))
 
-
 ;;
 ;; The backends that push state.
 ;;
@@ -150,7 +149,6 @@ would keep the Python process busy for nothing."
                      (blink-search-current-buffer-do name 2 1))))
         (should (null (blink-search-backends-test--epc result)))))))
 
-
 ;;
 ;; The backends that open a file.
 ;;
@@ -213,7 +211,6 @@ gone."
       (should (null blink-search-grep-pdf-preview-timer))
       (should (null (blink-search-backends-test--epc result))
               ))))
-
 
 (ert-deftest blink-search-imenu-do-jumps-in-the-buffer-the-index-came-from ()
   "The jump lands in the indexed buffer, not in whatever is current.

@@ -138,7 +138,6 @@ If COLOR-NAME is unknown to Emacs, then return COLOR-NAME as-is."
 
 (defun blink-search-icon (collection name &optional fg-color bg-color zoom)
   "Build the icon NAME of COLLECTION as an SVG image.
-
 FG-COLOR is the stroke colour and BG-COLOR the plate behind the icon;
 either may be a face name or a colour string.  ZOOM is an integer
 scale factor, 1 by default."
@@ -187,7 +186,6 @@ scale factor, 1 by default."
 
 (defun blink-search-icon-build (collection name fg-color)
   "Return the display string of icon NAME of COLLECTION coloured FG-COLOR.
-
 The result is cached in `blink-search-icon-cache'.  Return an empty
 string when the icon cannot be shown, so that callers can always
 concatenate the result into a candidate line."
@@ -205,5 +203,4 @@ concatenate the result into a candidate line."
     ""))
 
 (provide 'blink-search-icon)
-
 ;;; blink-search-icon.el ends here

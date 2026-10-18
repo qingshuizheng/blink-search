@@ -92,7 +92,6 @@
 
 (defvar blink-search-pdf-preview-timer nil
   "Timer of the pending preview of a match in the current pdf file.
-
 See `blink-search-grep-pdf-preview-timer' for why the preview is
 delayed.")
 
@@ -105,7 +104,6 @@ delayed.")
 
 (defun blink-search-pdf-do (file page submatches)
   "Visit FILE, go to PAGE and highlight SUBMATCHES.
-
 The viewer is chosen by `blink-search-pdf-backend'; an unknown backend
 only reports a message."
   ;;highlight the matches
@@ -119,7 +117,6 @@ only reports a message."
 
 (defun blink-search-pdf-real-preview (file page submatches)
   "Highlight SUBMATCHES at PAGE of FILE and remember the buffer.
-
 The buffer is remembered when the file was not open before, so that
 `blink-search-pdf-clean' can close it again."
   (blink-search-select-input-window
@@ -136,7 +133,6 @@ The buffer is remembered when the file was not open before, so that
                              (lambda ()
                                (blink-search-pdf-real-preview file page submatches)))))
 
-
 (defun blink-search-pdf-clean ()
   "Drop the preview buffers and cancel the pending preview."
   (blink-search-grep-file-clean)
@@ -145,5 +141,4 @@ The buffer is remembered when the file was not open before, so that
     (setq blink-search-pdf-preview-timer nil)))
 
 (provide 'blink-search-pdf)
-
 ;;; blink-search-pdf.el ends here

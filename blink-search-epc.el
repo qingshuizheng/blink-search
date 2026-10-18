@@ -82,7 +82,6 @@ modify it because the applications run on various environments.")
 
 (defvar blink-search-deferred-queue nil
   "[internal] The execution queue of deferred objects.
-
 See `blink-search-deferred-post-task' and `blink-search-deferred-worker'.")
 
 (defun blink-search-deferred-post-task (d which &optional arg)
@@ -129,7 +128,6 @@ Mainly this function is called by timer asynchronously."
 
 (defun blink-search-deferred-resignal (err)
   "[internal] Safely resignal ERR as an Emacs condition.
-
 If ERR is a cons (ERROR-SYMBOL . DATA) where ERROR-SYMBOL has an
 `error-conditions' property, it is re-signaled unchanged. If ERR
 is a string, it is signaled as a generic error using `error'.
@@ -248,7 +246,6 @@ is a short cut of following code:
 
 (defun blink-search-deferred-nextc (d callback)
   "Create a deferred object with OK callback.
-
 It is connected to the given deferred object D."
   (declare (indent 1))
   (let ((nd (make-blink-search-deferred-object :callback callback)))
@@ -256,7 +253,6 @@ It is connected to the given deferred object D."
 
 (defun blink-search-deferred-error (d callback)
   "Create a deferred object with an errorback.
-
 It is connected to the given deferred object D."
   (declare (indent 1))
   (let ((nd (make-blink-search-deferred-object :errorback callback)))
@@ -372,7 +368,6 @@ tasks to the returned deferred object."
 (defun blink-search-epc-signal-send (channel event-sym &rest args)
   "Send a signal to CHANNEL. If ARGS values are given,
 observers can get the values by following code:
-
   (lambda (event)
     (destructuring-bind
      (event-sym (args))
@@ -502,7 +497,6 @@ This variable is for debug purpose.")
 
 (defun blink-search-epc-init-epc-layer (mngr)
   "[internal] Connect to the server program.
-
 Return the `blink-search-epc-connection' instance it uses."
   (let* ((mngr mngr)
          (conn (blink-search-epc-manager-connection mngr))
@@ -675,7 +669,6 @@ connection."
 ;; epcs
 (defvar blink-search-epc-server-client-processes nil
   "[internal] A list of ([process object] . [`blink-search-epc-manager' instance]).
-
 When the server process accepts the client connection, the
 `blink-search-epc-manager' instance is created and stored in this
 variable.  This variable is used for the management purpose.")

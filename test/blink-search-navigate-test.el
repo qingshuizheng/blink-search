@@ -151,7 +151,6 @@
     (blink-search-goto-column 3)
     (should (= (point) (+ (point-min) 3)))))
 
-
 ;;; The wire convention of a call into Python.
 
 (ert-deftest blink-search-call-async-passes-a-flat-argument-list ()
@@ -181,7 +180,6 @@ so it is pinned here on the Elisp side."
                (lambda (_mngr method args) (setq captured (cons method args)))))
       (blink-search-call-async "search_elisp_symbol_update" '("a" "b")))
     (should (equal (cdr captured) '(("a" "b"))))))
-
 
 (ert-deftest blink-search-quit-forgets-the-old-candidates ()
   "Leaving the search clears what the menu was showing.

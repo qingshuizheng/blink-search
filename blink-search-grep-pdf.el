@@ -27,7 +27,6 @@
 
 (defvar blink-search-grep-pdf-preview-timer nil
   "Timer of the pending preview of a pdf match.
-
 Previewing a pdf means opening a viewer and scrolling it, which is far
 too expensive to do for every candidate the cursor passes over, so the
 real preview runs `blink-search-grep-pdf-preview-idle-time' after the
@@ -35,7 +34,6 @@ selection stopped moving.")
 
 (defun blink-search-grep-pdf-pdftool-goto (file page submatches)
   "Visit FILE, go to PAGE and highlight SUBMATCHES with pdf-tools.
-
 SUBMATCHES are byte offsets into the text of the page, as ripgrep
 reports them."
   (find-file file)
@@ -45,7 +43,6 @@ reports them."
 
 (defun blink-search-grep-pdf-do (file page submatches)
   "Visit FILE, go to PAGE and highlight SUBMATCHES.
-
 The viewer is chosen by `blink-search-grep-pdf-backend'; an unknown
 backend only reports a message, so that the search keeps working when
 neither pdf-tools nor the EAF pdf viewer is installed."
@@ -60,7 +57,6 @@ neither pdf-tools nor the EAF pdf viewer is installed."
 
 (defun blink-search-grep-pdf-real-preview (file page submatches)
   "Highlight SUBMATCHES at PAGE of FILE and remember the buffer.
-
 This is what the idle timer in `blink-search-grep-pdf-preview' calls:
 the buffer is remembered when the file was not open before, so that
 `blink-search-grep-pdf-clean' can close it again."
@@ -72,7 +68,6 @@ the buffer is remembered when the file was not open before, so that
 
 (defun blink-search-grep-pdf-preview (file page submatches)
   "Preview SUBMATCHES at PAGE of FILE once the selection settles down.
-
 A preview that is still pending is replaced, so that a quick
 `C-M-n C-M-n C-M-n' only opens the last candidate."
   (if blink-search-grep-pdf-preview-timer (cancel-timer blink-search-grep-pdf-preview-timer))
@@ -80,7 +75,6 @@ A preview that is still pending is replaced, so that a quick
         (run-with-idle-timer blink-search-grep-pdf-preview-idle-time nil
                              (lambda ()
                                (blink-search-grep-pdf-real-preview file page submatches)))))
-
 
 (defun blink-search-grep-pdf-clean ()
   "Drop the preview buffers and cancel the pending preview."
@@ -90,5 +84,4 @@ A preview that is still pending is replaced, so that a quick
     (setq blink-search-grep-pdf-preview-timer nil)))
 
 (provide 'blink-search-grep-pdf)
-
 ;;; blink-search-grep-pdf.el ends here

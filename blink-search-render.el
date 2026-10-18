@@ -56,7 +56,6 @@
 
 (defun blink-search-render-candidate (backend-name candidate candidate-max-length)
   "Return CANDIDATE shortened to CANDIDATE-MAX-LENGTH for BACKEND-NAME.
-
 A file name is shortened to its base name; a line of a file keeps its
 head and loses the tail; everything else keeps both ends around an
 ellipsis, because the tail of a path or of a symbol is what tells two
@@ -75,7 +74,6 @@ candidates apart."
 
 (defun blink-search-truncate-candidate-with-ellipsis (candidate candidate-max-length truncate-length)
   "Return CANDIDATE cut to TRUNCATE-LENGTH characters plus an ellipsis.
-
 CANDIDATE-MAX-LENGTH is accepted for symmetry with
 `blink-search-render-candidate' and is not used."
   (ignore candidate-max-length)
@@ -86,7 +84,6 @@ CANDIDATE-MAX-LENGTH is accepted for symmetry with
 
 (defun blink-search-get-candidate-text (candidate-info)
   "Return the text of CANDIDATE-INFO.
-
 CANDIDATE-INFO is either a plain string or a plist with a :text key, as
 the Python half sends both shapes."
   ;; Remove ^M char at end of line.
@@ -100,7 +97,6 @@ the Python half sends both shapes."
 
 (defun blink-search-get-candidate-matches (candidate-info)
   "Return the match positions of CANDIDATE-INFO, or nil.
-
 The positions are byte offsets into the candidate text, as ripgrep
 reports them; a plain string candidate has none."
   (unless (stringp candidate-info)
@@ -108,7 +104,6 @@ reports them; a plain string candidate has none."
 
 (defun blink-search-column-to-string-index (string column)
   "Return the character index inside STRING that starts byte COLUMN.
-
 `move-to-column' cannot do this for a mixed string of Chinese and
 English characters, which is what ripgrep reports positions in."
   (let ((scan-column 0)
@@ -121,7 +116,6 @@ English characters, which is what ripgrep reports positions in."
 
 (defun blink-search-render-backend-buffer (backend-items backend-select-index window-width backend-number)
   "Fill `blink-search-backend-buffer' with BACKEND-ITEMS.
-
 BACKEND-SELECT-INDEX is the row to highlight, WINDOW-WIDTH the width to
 pad each row to, and BACKEND-NUMBER the number of backends that returned
 a candidate: the buffer stays empty unless there is more than one."
@@ -152,7 +146,6 @@ a candidate: the buffer stays empty unless there is more than one."
 
 (defun blink-search-render-candidate-buffer (candidate-items candidate-select-index window-width backend-number)
   "Fill `blink-search-candidate-buffer' with CANDIDATE-ITEMS.
-
 CANDIDATE-SELECT-INDEX is the row to highlight, WINDOW-WIDTH the width
 the rows are padded to, and BACKEND-NUMBER decides whether a row also
 shows the name of its backend."
@@ -226,7 +219,6 @@ shows the name of its backend."
 
 (defun blink-search-render-tooltip-buffer (backend-name search-items-index search-items-number)
   "Fill `blink-search-tooltip-buffer' with the search prefix help line.
-
 BACKEND-NAME is the backend of the selected row, SEARCH-ITEMS-INDEX
 the one based index of that row and SEARCH-ITEMS-NUMBER the number of
 candidates the search found."
@@ -248,7 +240,6 @@ candidates the search found."
 
 (defun blink-search-render ()
   "Draw the tooltip, candidate and backend buffers from the current state.
-
 The state it reads is the group of buffer local variables
 `blink-search-update-items' has just set; the function itself is called
 every time the selection moves, so it has to be cheap."
@@ -300,5 +291,4 @@ left the search."
     (blink-search-render)))
 
 (provide 'blink-search-render)
-
 ;;; blink-search-render.el ends here

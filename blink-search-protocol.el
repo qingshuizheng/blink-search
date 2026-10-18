@@ -57,7 +57,6 @@
 The Python half declares the same value as PROTOCOL_VERSION in
 core/protocol.py, and scripts/check-protocol.py compares the two.")
 
-
 ;;
 ;; Emacs side: methods the Python process may call.
 ;;
@@ -91,7 +90,6 @@ core/protocol.py, and scripts/check-protocol.py compares the two.")
 Each element is a cons of the EPC method name and a one line
 description.  See the `blink-search--eval-in-emacs-func' callback in
 blink-search-process.el for how they are dispatched.")
-
 
 ;;
 ;; Python side: methods Emacs calls.
@@ -142,5 +140,4 @@ description of its arguments.")
   "Update methods of the registered backends, one per backend module.")
 
 (provide 'blink-search-protocol)
-
 ;;; blink-search-protocol.el ends here

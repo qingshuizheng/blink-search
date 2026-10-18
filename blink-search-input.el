@@ -53,8 +53,6 @@
 (defvar eaf--buffer-url)
 (declare-function evil-set-initial-state "evil" (mode state &optional local))
 
-
-
 (defconst blink-search-input-prefixes
   '(("#" "Current Buffer")
     ("!" "Grep File")
@@ -72,7 +70,6 @@ turned on is still meant for the same backend.")
 
 (defun blink-search-input-backend (input)
   "Return the backend INPUT is restricted to, or nil for all of them.
-
 INPUT is the whole content of the input buffer, already trimmed.  A
 keyword that starts with one of `blink-search-input-prefixes' searches
 that backend only; anything else searches
@@ -85,7 +82,6 @@ backend, and nil means all of the backends the option allows."
 
 (defun blink-search-input-keyword (input)
   "Return the keyword INPUT carries, with its prefix taken off.
-
 An input that has no prefix is returned as it is."
   (if (blink-search-input-backend input)
       (substring input 1)
@@ -132,7 +128,6 @@ line of search input, never a file, so nothing else is turned on."
 
 (defun blink-search-monitor-input (_begin _end _length)
   "Send the input buffer to the backends it is meant for.
-
 This is the `after-change-functions' callback of the input buffer.  A
 keyword that starts with `#' searches the current buffer, `!' the
 current directory, `;' the PDFs under
@@ -150,7 +145,6 @@ anything else searches `blink-search-search-backends'."
 
 (defun blink-search-start ()
   "Run the search `blink-search' was called with.
-
 It is registered in `blink-search-start-update-list', so it runs once
 the Python process is up."
   (when (blink-search-epc-live-p blink-search-epc-process)
@@ -161,5 +155,4 @@ the Python process is up."
 (add-to-list 'blink-search-start-update-list #'blink-search-start t)
 
 (provide 'blink-search-input)
-
 ;;; blink-search-input.el ends here

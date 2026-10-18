@@ -81,7 +81,6 @@
 
 ;;; Require
 
-
 ;;; Code:
 
 (require 'imenu)
@@ -91,11 +90,9 @@
 
 (defvar blink-search-imenu-buffer nil
   "The buffer the index in the Python half was built from.
-
 `blink-search-start-buffer' is cleared when the menu is left, and the jump
 below runs after that: the position it is given belongs to this buffer, so
 the buffer is remembered here.
-
 `blink-search-start-buffer` is cleared by `blink-search-quit'.")
 
 (defun blink-search-init-imenu ()
@@ -108,7 +105,6 @@ the buffer is remembered here.
 
 (defun blink-search-imenu-get-candidates ()
   "Return the imenu index of the start buffer as a list of candidates.
-
 Each candidate is a list of the name of the entry and the position it
 points at.  Return nil when the buffer has no imenu index at all."
   (ignore-errors
@@ -120,7 +116,6 @@ points at.  Return nil when the buffer has no imenu index at all."
 
 (defun blink-search-imenu-build-candidates (alist)
   "Flatten the imenu ALIST into a list of (NAME . POSITION) candidates.
-
 The Types and Variables groups are dropped: they are a
 subdivision of a language's index, not something a user searches for
 by name.  Markers and overlays are copied, because the index alist is
@@ -152,7 +147,6 @@ rebuilt on every search while the candidates outlive it."
 
 (defun blink-search-imenu-do (point)
   "Jump to POINT in the buffer the index came from and flash the line.
-
 POINT is a position in that buffer, not in whatever buffer happens to be
 current when the answer arrives -- the menu has already been left, and the
 current buffer at that moment is the input buffer.  Jumping there put the
@@ -174,5 +168,4 @@ point in the middle of the menu instead of on the definition."
 (add-to-list 'blink-search-start-update-list #'blink-search-init-imenu t)
 
 (provide 'blink-search-imenu)
-
 ;;; blink-search-imenu.el ends here

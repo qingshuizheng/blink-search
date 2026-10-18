@@ -112,7 +112,6 @@
 ;;;###autoload
 (defun blink-search (&optional arg)
   "Start a blink-search session.
-
 With ARG, the search starts from the symbol at point; without it the
 search starts empty.  An active region is used as the first keyword
 instead, and a keyword that starts with `#', `!', `;' or `:' restricts
@@ -135,11 +134,9 @@ the search to the current buffer, the current directory, PDFs under
                                     (t
                                      (if arg (or (thing-at-point 'symbol t) "") ""))))
 
-  ;; Save window configuration.
   (unless blink-search-window-configuration
     (setq blink-search-window-configuration (current-window-configuration)))
 
-  ;; Create buffers.
   (with-current-buffer (get-buffer-create blink-search-input-buffer)
     (erase-buffer)
 
@@ -150,7 +147,6 @@ the search to the current buffer, the current directory, PDFs under
 
     (blink-search-disable-options nil)
 
-    ;; Set window margin.
     (setq-local left-margin-width 1)
     (setq-local right-margin-width 1))
 
@@ -162,7 +158,6 @@ the search to the current buffer, the current directory, PDFs under
     ;; Avoid background around input string.
     (face-remap-add-relative 'hl-line :background (face-background 'default))
 
-    ;; Set window margin.
     (setq-local left-margin-width 1)
     (setq-local right-margin-width 1))
 
@@ -183,7 +178,6 @@ the search to the current buffer, the current directory, PDFs under
                         blink-search-backend-buffer))
     (blink-search-bind-quit-keys buffer))
 
-  ;; Init color.
   (blink-search-init-colors)
 
   (if blink-search-enable-posframe
@@ -193,10 +187,8 @@ the search to the current buffer, the current directory, PDFs under
   (dolist (update-func blink-search-start-update-list)
     (funcall update-func))
 
-  ;; Start process.
   (unless blink-search-is-starting
     (blink-search-start-process)))
 
 (provide 'blink-search)
-
 ;;; blink-search.el ends here

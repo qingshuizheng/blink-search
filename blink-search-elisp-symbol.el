@@ -81,7 +81,6 @@
 
 ;;; Require
 
-
 ;;; Code:
 
 (require 'blink-search-state)
@@ -96,7 +95,6 @@
 
 (defvar blink-search-elisp-parse-depth 100
   "How many levels up `blink-search-elisp-local-symbols' walks.
-
 A value that is too small makes the backend miss a binding that is
 nested deep inside the form around point.")
 
@@ -113,7 +111,6 @@ nested deep inside the form around point.")
 
 (defun blink-search-elisp-symbol-update ()
   "Push the elisp symbols to the Python half when the number changed.
-
 Both the symbols of the buffer the search started from and the global
 symbols of the running Emacs are sent, so that a user can search for a
 function that exists but is not visible in the current buffer."
@@ -141,7 +138,6 @@ function that exists but is not visible in the current buffer."
 
 (defun blink-search-elisp-symbol-do (candidate)
   "Run the most useful action for the symbol named CANDIDATE.
-
 A command is called, a function or macro is described, a face is
 customized, a variable is described: whatever the symbol is, the user
 gets the buffer that says everything about it."
@@ -170,7 +166,6 @@ gets the buffer that says everything about it."
 
 (defun blink-search-elisp-local-symbols ()
   "Return the names bound by the forms around point.
-
 The walk goes up `blink-search-elisp-parse-depth' levels and collects
 the first `blink-search-elisp-parse-limit' names of every binding form
 it meets, which is what makes a local `let' binding searchable before
@@ -216,5 +211,4 @@ Emacs Lisp buffer."
 (add-to-list 'blink-search-idle-update-list #'blink-search-start-elisp-symbol-update t)
 
 (provide 'blink-search-elisp-symbol)
-
 ;;; blink-search-elisp-symbol.el ends here

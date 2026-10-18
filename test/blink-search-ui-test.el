@@ -95,12 +95,18 @@ selected frame when the menu opens again."
   "Every pane of the menu answers `C-g' with the quit command.
 
 A preview can leave the focus in the candidate or backend pane, where `C-g'
-used to be `keyboard-quit': it beeped and the popup stayed on screen."
+used to be `keyboard-quit': it beeped and the popup stayed on screen.
+`q' is only bound when the caller asks for it, because in the input buffer
+it has to stay a letter."
   (let ((buffer (generate-new-buffer " *blink-search-quit-keys*")))
     (unwind-protect
         (progn
           (blink-search-bind-quit-keys buffer)
           (with-current-buffer buffer
             (should (eq (key-binding (kbd "C-g")) 'blink-search-quit))
-            (should (eq (key-binding (kbd "ESC ESC ESC")) 'blink-search-quit))))
+            (should (eq (key-binding (kbd "ESC ESC ESC")) 'blink-search-quit))
+            (should-not (eq (key-binding (kbd "q")) 'blink-search-quit)))
+          (blink-search-bind-quit-keys buffer t)
+          (with-current-buffer buffer
+            (should (eq (key-binding (kbd "q")) 'blink-search-quit))))
       (kill-buffer buffer))))

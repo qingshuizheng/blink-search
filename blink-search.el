@@ -173,10 +173,12 @@ the search to the current buffer, the current directory, PDFs under
 
   ;; `C-g' has to leave the search from every pane of the menu, not only from
   ;; the input buffer: a preview can leave the focus in one of the others.
+  ;; `q' does the same there -- but not in the input buffer, where it is a
+  ;; letter of the keyword.
   (dolist (buffer (list blink-search-tooltip-buffer
                         blink-search-candidate-buffer
                         blink-search-backend-buffer))
-    (blink-search-bind-quit-keys buffer))
+    (blink-search-bind-quit-keys buffer t))
 
   (blink-search-init-colors)
 

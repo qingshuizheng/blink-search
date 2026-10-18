@@ -123,8 +123,7 @@ line of search input, never a file, so nothing else is turned on."
   ;; Injection keymap.
   (use-local-map blink-search-mode-map)
   (when (featurep 'evil)
-    (evil-set-initial-state 'blink-search-mode 'emacs))
-  )
+    (evil-set-initial-state 'blink-search-mode 'emacs)))
 
 (defun blink-search-monitor-input (_begin _end _length)
   "Send the input buffer to the backends it is meant for.

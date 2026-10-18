@@ -120,8 +120,7 @@ can close it again."
    (let ((match-file (blink-search-grep-file-get-match-buffer file)))
      (blink-search-grep-file-do file line column)
      (unless match-file
-       (add-to-list 'blink-search-grep-file-temp-buffers (current-buffer))
-       ))))
+       (add-to-list 'blink-search-grep-file-temp-buffers (current-buffer))))))
 
 (defun blink-search-grep-file-clean ()
   "Kill every buffer a previous preview opened."

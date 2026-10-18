@@ -209,8 +209,7 @@ gone."
     (let ((result (blink-search-backends-test--capture
                    (blink-search-grep-pdf-clean))))
       (should (null blink-search-grep-pdf-preview-timer))
-      (should (null (blink-search-backends-test--epc result))
-              ))))
+      (should (null (blink-search-backends-test--epc result))))))
 
 (ert-deftest blink-search-imenu-do-jumps-in-the-buffer-the-index-came-from ()
   "The jump lands in the indexed buffer, not in whatever is current.

@@ -211,8 +211,7 @@ selected frame."
              :max-width  posframe-width
              :border-width 2
              :border-color "gray"
-             :accept-focus (equal buffer blink-search-input-buffer)
-             )))))
+             :accept-focus (equal buffer blink-search-input-buffer))))))
 
 (defun blink-search-init-bottom-layout ()
   "Lay the four blink-search buffers out in the selected window."
@@ -303,8 +302,7 @@ so every action that visits another buffer has to come back to it."
 
        ,@body
 
-       (select-window input-window)
-       )))
+       (select-window input-window))))
 
 (defun blink-search-select-start-buffer (buffer)
   "Switch to BUFFER, the buffer the search was started from.

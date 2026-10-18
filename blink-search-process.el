@@ -64,8 +64,7 @@ port is stored in `blink-search-server-port'."
              (let ((mngr mngr))
                (blink-search-epc-define-method mngr 'eval-in-emacs 'blink-search--eval-in-emacs-func)
                (blink-search-epc-define-method mngr 'get-emacs-var 'blink-search--get-emacs-var-func)
-               (blink-search-epc-define-method mngr 'get-emacs-vars 'blink-search--get-emacs-vars-func)
-               ))))
+               (blink-search-epc-define-method mngr 'get-emacs-vars 'blink-search--get-emacs-vars-func)))))
     (if blink-search-server
         (setq blink-search-server-port (process-contact blink-search-server :service))
       (error "[Blink-Search] blink-search-server failed to start")))
@@ -141,8 +140,7 @@ loaded."
     (blink-search--start-epc-server)
     (let* ((blink-search-args (append
                                (list blink-search-python-file)
-                               (list (number-to-string blink-search-server-port))
-                               )))
+                               (list (number-to-string blink-search-server-port)))))
 
       (if blink-search-enable-debug
           (progn
@@ -179,8 +177,7 @@ loaded."
   (when (fboundp 'blink-search-stop-elisp-symbol-update)
     (blink-search-stop-elisp-symbol-update))
   (when (fboundp 'blink-search-stop-recent-file-update)
-    (blink-search-stop-recent-file-update))
-  )
+    (blink-search-stop-recent-file-update)))
 
 (add-hook 'kill-emacs-hook #'blink-search-kill-process)
 
@@ -209,8 +206,7 @@ start up lists so that every backend pushes its state to Python."
                                   :commands (cons blink-search-internal-process-prog blink-search-internal-process-args)
                                   :title (mapconcat 'identity (cons blink-search-internal-process-prog blink-search-internal-process-args) " ")
                                   :port blink-search-epc-port
-                                  :connection (blink-search-epc-connect "127.0.0.1" blink-search-epc-port)
-                                  ))
+                                  :connection (blink-search-epc-connect "127.0.0.1" blink-search-epc-port)))
   (blink-search-epc-init-epc-layer blink-search-epc-process)
   (setq blink-search-is-starting nil)
 

@@ -123,8 +123,7 @@ rebuilt on every search while the candidates outlive it."
   (cl-remove-if
    (lambda (c)
      (or (string-equal (car c) "Types")
-         (string-equal (car c) "Variables")
-         ))
+         (string-equal (car c) "Variables")))
    (cl-loop for elm in alist
             nconc (cond
                    ((imenu--subalist-p elm)

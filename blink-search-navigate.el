@@ -134,8 +134,7 @@ once per entry of `blink-search-quick-keys' by `blink-search-mode-map'."
              (candidate-info (plist-get (nth candidate-index blink-search-candidate-items) :candidate))
              (candidate (blink-search-get-candidate-text candidate-info)))
         (blink-search-quit)
-        (blink-search-call-async "search_do" backend-name candidate)
-        ))))
+        (blink-search-call-async "search_do" backend-name candidate)))))
 
 (defun blink-search-goto-column (column)
   "Move point forward to byte COLUMN of the current line.
@@ -158,8 +157,7 @@ position of a match in."
       ;; byte compiler cannot see, hence the `ignore'.
       (ignore pulse-delay)
       ;; Flash match line.
-      (pulse-momentary-highlight-one-line (point) 'blink-search-font-lock-flash)
-      )))
+      (pulse-momentary-highlight-one-line (point) 'blink-search-font-lock-flash))))
 
 (defun blink-search-candidate-select-next ()
   "Ask the Python half to select the next candidate."

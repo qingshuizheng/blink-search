@@ -134,8 +134,7 @@ a candidate: the buffer stays empty unless there is more than one."
                     (concat
                      (propertize (format " %s " candidate) 'face (if (equal backend-index backend-select-index) 'blink-search-select-face 'font-lock-doc-face))
                      (propertize " " 'display (blink-search-indent-pixel window-width))
-                     "\n"
-                     ))
+                     "\n"))
 
               (when (equal backend-index backend-select-index)
                 (add-face-text-property 0 (length backend-line) 'blink-search-select-face 'append backend-line))
@@ -189,14 +188,12 @@ shows the name of its backend."
                                     (- window-width
                                        (if (fboundp 'string-pixel-width)
                                            (string-pixel-width (format "%s%s" (make-string 2 ?\s) backend))
-                                         (* (frame-char-width) (+ (string-width backend) padding-right)))
-                                       )))
+                                         (* (frame-char-width) (+ (string-width backend) padding-right))))))
                      (propertize " " 'display (blink-search-indent-pixel window-width)))
                    (when (> backend-number 1)
                      (propertize (format "%s " backend)
                                  'face (if (equal candidate-index candidate-select-index) 'blink-search-select-face 'font-lock-doc-face)))
-                   "\n"
-                   ))
+                   "\n"))
 
             ;; Highlight match strings.
             (when (and matches
@@ -214,8 +211,7 @@ shows the name of its backend."
 
             (insert candidate-line)
 
-            (setq candidate-index (1+ candidate-index))
-            ))))))
+            (setq candidate-index (1+ candidate-index))))))))
 
 (defun blink-search-render-tooltip-buffer (backend-name search-items-index search-items-number)
   "Fill `blink-search-tooltip-buffer' with the search prefix help line.
